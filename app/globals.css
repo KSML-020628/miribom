@@ -345,12 +345,215 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .guideCopy aside { width: fit-content; margin-top: 18px; padding: 8px 12px; color: var(--blue-dark); background: var(--blue-soft); border-radius: 8px; font-size: .84rem; font-weight: 800; }
 .pageListen { align-self: flex-end; min-width: 180px; min-height: 56px; margin-top: 20px; color: var(--blue-dark); background: var(--blue-soft); border: 3px solid var(--blue); border-radius: 11px; font-size: 1rem; font-weight: 900; cursor: pointer; }
 .guideBottomActions { display: flex; justify-content: center; gap: 12px; margin-top: 20px; }
+.guideBottomActions .chatOpenButton {
+  min-height: 64px;
+  color: var(--white);
+  background: var(--blue-dark);
+  border-color: var(--blue-dark);
+  font-size: 1.12rem;
+}
+.chatOpenButton span {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  margin-right: 7px;
+  color: var(--blue-dark);
+  background: var(--white);
+  border-radius: 50%;
+  font-weight: 950;
+}
 .pageOverview { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-height: 650px; overflow-y: auto; padding: 4px; }
 .pageOverview button { min-height: 120px; display: grid; align-content: center; gap: 10px; padding: 22px; text-align: left; background: var(--paper); border: 3px solid var(--line); border-radius: 12px; cursor: pointer; }
 .pageOverview button:hover { border-color: var(--blue); }
 .pageOverview span { color: var(--blue-dark); font-size: .9rem; font-weight: 850; }
 .pageOverview b { font-size: 1.3rem; }
 .printOnly { display: none; }
+
+/* 안내문 근거형 쉬운말 챗봇 */
+.chatOverlay {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, .68);
+}
+.chatPanel {
+  width: min(880px, 100%);
+  height: min(820px, calc(100dvh - 36px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  overflow: hidden;
+  background: var(--paper);
+  border: 4px solid var(--blue);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+.chatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px;
+  border-bottom: 2px solid var(--line);
+}
+.chatHeader h2 { margin: 0; font-size: 2rem; letter-spacing: -.04em; }
+.chatHeader button {
+  min-width: 82px;
+  min-height: 52px;
+  color: var(--blue-dark);
+  background: var(--paper);
+  border: 3px solid var(--blue);
+  border-radius: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.chatConversation {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  padding: 26px 28px;
+  background: var(--canvas);
+}
+.chatWelcome {
+  margin: auto;
+  padding: 36px;
+  text-align: center;
+  background: var(--paper);
+  border: 3px solid var(--blue);
+  border-radius: 18px;
+}
+.chatWelcome strong { font-size: 1.8rem; }
+.chatWelcome p { margin: 12px 0 0; color: var(--ink); font-size: 1.2rem; line-height: 1.55; font-weight: 700; }
+.chatMessage {
+  width: min(680px, 92%);
+  padding: 20px 22px;
+  background: var(--paper);
+  border: 3px solid var(--line);
+  border-radius: 16px;
+}
+.chatMessage.user { align-self: flex-end; background: var(--blue-soft); border-color: var(--blue); }
+.chatMessage.assistant { align-self: flex-start; border-color: var(--green); }
+.chatMessage > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--blue-dark);
+  font-size: .92rem;
+  font-weight: 950;
+}
+.chatMessage.assistant > span { color: var(--green); }
+.chatMessage > small {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: .84rem;
+  font-weight: 750;
+}
+.chatMessage > p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.4rem;
+  line-height: 1.55;
+  font-weight: 800;
+}
+.chatListenButton {
+  min-height: 48px;
+  margin-top: 16px;
+  padding: 0 16px;
+  color: var(--blue-dark);
+  background: var(--blue-soft);
+  border: 2px solid var(--blue);
+  border-radius: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.chatEvidence { margin-top: 14px; border-top: 2px solid var(--line); }
+.chatEvidence summary {
+  padding: 14px 0 4px;
+  color: var(--blue-dark);
+  font-size: .95rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+.chatEvidence blockquote {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: var(--paper);
+  border-left: 5px solid var(--blue);
+}
+.chatEvidence blockquote b { color: var(--blue-dark); font-size: .85rem; }
+.chatEvidence blockquote p { margin: 5px 0 0; color: var(--ink); font-size: .95rem; line-height: 1.5; font-weight: 650; }
+.chatThinking {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px;
+  background: var(--paper);
+  border: 3px solid var(--blue);
+  border-radius: 16px;
+}
+.chatThinking b { font-size: 1.05rem; }
+.chatThinking span { color: var(--blue); font-size: 1.7rem; font-weight: 950; animation: pulse 1.1s ease-in-out infinite alternate; }
+.chatSuggestions {
+  display: flex;
+  gap: 9px;
+  overflow-x: auto;
+  padding: 14px 28px;
+  background: var(--paper);
+  border-top: 2px solid var(--line);
+}
+.chatSuggestions button {
+  min-height: 48px;
+  flex: 0 0 auto;
+  padding: 0 15px;
+  color: var(--blue-dark);
+  background: var(--blue-soft);
+  border: 2px solid var(--blue);
+  border-radius: 999px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.chatComposer { padding: 16px 28px; background: var(--paper); border-top: 2px solid var(--line); }
+.chatComposer > label { display: block; margin-bottom: 9px; color: var(--ink); font-size: 1rem; font-weight: 900; }
+.chatComposer > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; }
+.chatComposer input {
+  width: 100%;
+  min-height: 62px;
+  padding: 0 17px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 3px solid var(--blue);
+  border-radius: 11px;
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+.chatComposer button {
+  min-height: 62px;
+  padding: 0 18px;
+  border: 3px solid var(--blue);
+  border-radius: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.voiceButton { color: var(--blue-dark); background: var(--paper); }
+.voiceButton.listening { color: var(--white); background: var(--red); border-color: var(--red); }
+.chatSendButton { color: var(--white); background: var(--blue-dark); }
+.chatStatus { margin: 10px 0 0; color: var(--blue-dark); font-size: .92rem; font-weight: 800; }
+.chatSafety {
+  margin: 0;
+  padding: 11px 28px 14px;
+  color: var(--ink);
+  background: var(--amber-soft);
+  border-top: 2px solid var(--amber);
+  font-size: .84rem;
+  line-height: 1.45;
+  font-weight: 750;
+}
 
 /* 로딩과 오류 */
 .processingOverlay {
@@ -437,7 +640,20 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .guideCopy aside { margin-right: auto; margin-left: auto; }
   .pageListen { width: 100%; }
   .pageOverview { grid-template-columns: 1fr; }
-  .guideBottomActions { margin-bottom: 85px; }
+  .guideBottomActions { flex-direction: column; margin-bottom: 85px; }
+  .guideBottomActions button { width: 100%; }
+  .chatOverlay { padding: 0; }
+  .chatPanel { width: 100%; height: 100dvh; border-width: 0; border-radius: 0; }
+  .chatHeader { padding: 18px 16px; }
+  .chatHeader h2 { font-size: 1.65rem; }
+  .chatConversation { padding: 18px 14px; }
+  .chatMessage { width: 96%; padding: 18px; }
+  .chatMessage > p { font-size: 1.28rem; }
+  .chatSuggestions { padding: 12px 14px; }
+  .chatComposer { padding: 14px; }
+  .chatComposer > div { grid-template-columns: 1fr 1fr; }
+  .chatComposer input { grid-column: 1 / -1; }
+  .chatSafety { padding: 10px 14px 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -449,7 +665,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 @media print {
   :root { --base-scale: 1; }
   body { background: var(--white); }
-  .appHeader, .progressSteps, .guideToolbar, .bookViewer, .guideBottomActions, .processingOverlay, .globalError { display: none !important; }
+  .appHeader, .progressSteps, .guideToolbar, .bookViewer, .guideBottomActions, .chatOverlay, .processingOverlay, .globalError { display: none !important; }
   .appShell, .mainViewport, .guideScreen { display: block; min-height: 0; padding: 0; background: var(--white); border: 0; box-shadow: none; }
   .printOnly { display: block; }
   .printOnly .guidePage {

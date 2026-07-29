@@ -1,6 +1,7 @@
 "use client";
 
 import type { FinalGuideResult, GuidePage } from "@/app/lib/types";
+import GuideChat from "./GuideChat";
 import PictureCard from "./PictureCard";
 
 const IMPORTANCE = {
@@ -21,6 +22,8 @@ interface Props {
   onEditAnswers: () => void;
   onRestart: () => void;
   onPrint: () => void;
+  documentText: string;
+  onSpeak: (text: string) => void;
 }
 
 function compactWhen(section: string, when?: string): string {
@@ -52,7 +55,20 @@ function GuidePageView({ page, total, onListen }: { page: GuidePage; total: numb
   );
 }
 
-export default function GuideStep({ guide, pageIndex, overview, onPage, onOverview, onListenPage, onListenAll, onEditAnswers, onRestart, onPrint }: Props) {
+export default function GuideStep({
+  guide,
+  pageIndex,
+  overview,
+  onPage,
+  onOverview,
+  onListenPage,
+  onListenAll,
+  onEditAnswers,
+  onRestart,
+  onPrint,
+  documentText,
+  onSpeak,
+}: Props) {
   const page = guide.pages[pageIndex];
   return (
     <section className="guideScreen" aria-labelledby="guide-heading">
@@ -82,6 +98,7 @@ export default function GuideStep({ guide, pageIndex, overview, onPage, onOvervi
       )}
 
       <div className="guideBottomActions">
+        <GuideChat guide={guide} documentText={documentText} onSpeak={onSpeak} />
         <button type="button" onClick={onEditAnswers}>답변 다시 보기</button>
         <button type="button" onClick={onRestart}>새 안내문 만들기</button>
       </div>

@@ -151,6 +151,47 @@ export interface ApiError {
   error: string;
 }
 
+export type ChatIntent =
+  | "water"
+  | "food"
+  | "medicine"
+  | "bowel_prep"
+  | "fasting"
+  | "time"
+  | "driving"
+  | "guardian"
+  | "arrival"
+  | "dental"
+  | "general"
+  | "unknown";
+
+export type ChatReplyKind =
+  | "grounded"
+  | "clarification"
+  | "ask_hospital"
+  | "symptom"
+  | "off_topic";
+
+export interface ChatEvidence {
+  source: "맞춤 안내서" | "병원 안내문";
+  text: string;
+}
+
+export interface ChatReply {
+  kind: ChatReplyKind;
+  answer: string;
+  intent: ChatIntent;
+  understood_as?: string;
+  evidence: ChatEvidence[];
+  suggestions: string[];
+}
+
+export interface ChatTurn {
+  role: "user" | "assistant";
+  text: string;
+  intent?: ChatIntent;
+}
+
 export type AppStep = "upload" | "review" | "questions" | "guide";
 export type ProcessingStage = "idle" | "parsing" | "analyzing" | "generating" | "done" | "error";
 
