@@ -5,13 +5,14 @@ import {
   retrieveChatEvidence,
   safeFallbackFromEvidence,
 } from "@/app/lib/chat-retrieval";
-import type { ChatTurn, FinalGuideResult } from "@/app/lib/types";
+import type { ChatTurn, FinalGuideResult, ParsedPage } from "@/app/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const MAX_QUESTION_LENGTH = 240;
 const MAX_DOCUMENT_LENGTH = 120_000;
+const MAX_DOCUMENT_PAGES = 100;
 
 function isGuide(value: unknown): value is FinalGuideResult {
   if (!value || typeof value !== "object") return false;
@@ -32,16 +33,38 @@ function safeHistory(value: unknown): ChatTurn[] {
     .map((turn) => ({ ...turn, text: turn.text.slice(0, MAX_QUESTION_LENGTH) }));
 }
 
+function safePages(value: unknown): ParsedPage[] {
+  if (!Array.isArray(value)) return [];
+  let remainingLength = MAX_DOCUMENT_LENGTH;
+  const pages: ParsedPage[] = [];
+  for (const candidate of value.slice(0, MAX_DOCUMENT_PAGES)) {
+    if (!candidate || typeof candidate !== "object" || remainingLength <= 0) break;
+    const page = candidate as Partial<ParsedPage>;
+    const pageNumber = typeof page.pageNumber === "number" && page.pageNumber > 0
+      ? Math.floor(page.pageNumber)
+      : pages.length + 1;
+    const markdown = typeof page.markdown === "string"
+      ? page.markdown.slice(0, remainingLength)
+      : "";
+    remainingLength -= markdown.length;
+    const text = typeof page.text === "string"
+      ? page.text.slice(0, Math.max(0, remainingLength))
+      : "";
+    remainingLength -= text.length;
+    pages.push({ pageNumber, markdown, text, blocks: [] });
+  }
+  return pages;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json() as {
       question?: unknown;
-      documentText?: unknown;
+      pages?: unknown;
       guide?: unknown;
       history?: unknown;
     };
     const question = typeof body.question === "string" ? body.question.trim() : "";
-    const documentText = typeof body.documentText === "string" ? body.documentText : "";
 
     if (!question) {
       return NextResponse.json({ error: "궁금한 내용을 입력해 주세요." }, { status: 400 });
@@ -59,7 +82,7 @@ export async function POST(request: Request) {
     }
 
     const evidence = retrieveChatEvidence(
-      documentText.slice(0, MAX_DOCUMENT_LENGTH),
+      safePages(body.pages),
       body.guide,
       classification,
     );

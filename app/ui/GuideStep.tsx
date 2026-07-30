@@ -1,6 +1,6 @@
 "use client";
 
-import type { FinalGuideResult, GuidePage } from "@/app/lib/types";
+import type { FinalGuideResult, GuidePage, ParsedPage } from "@/app/lib/types";
 import GuideChat from "./GuideChat";
 import PictureCard from "./PictureCard";
 
@@ -22,7 +22,7 @@ interface Props {
   onEditAnswers: () => void;
   onRestart: () => void;
   onPrint: () => void;
-  documentText: string;
+  documentPages: ParsedPage[];
   onSpeak: (text: string) => void;
 }
 
@@ -66,7 +66,7 @@ export default function GuideStep({
   onEditAnswers,
   onRestart,
   onPrint,
-  documentText,
+  documentPages,
   onSpeak,
 }: Props) {
   const page = guide.pages[pageIndex];
@@ -98,7 +98,7 @@ export default function GuideStep({
       )}
 
       <div className="guideBottomActions">
-        <GuideChat guide={guide} documentText={documentText} onSpeak={onSpeak} />
+        <GuideChat guide={guide} documentPages={documentPages} onSpeak={onSpeak} />
         <button type="button" onClick={onEditAnswers}>답변 다시 보기</button>
         <button type="button" onClick={onRestart}>새 안내문 만들기</button>
       </div>

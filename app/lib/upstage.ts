@@ -1,4 +1,9 @@
-import type { ExtractedInstruction } from "./types";
+import type {
+  ExtractedInstruction,
+  ParsedBlock,
+  ParsedCoordinate,
+  ParsedPage,
+} from "./types";
 import { fetchUpstage } from "./upstage-fetch";
 
 const UPSTAGE_BASE_URL = "https://api.upstage.ai/v1";
@@ -10,7 +15,126 @@ function getApiKey(): string {
   return apiKey;
 }
 
-export async function parseDocument(file: File): Promise<string> {
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? value as Record<string, unknown> : null;
+}
+
+function asContentString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function stripMarkup(value: string): string {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+    .replace(/[#_*`>|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseCoordinates(value: unknown): ParsedCoordinate[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const coordinates = value
+    .map((point) => asRecord(point))
+    .filter((point): point is Record<string, unknown> => Boolean(point))
+    .map((point) => ({
+      x: typeof point.x === "number" ? point.x : Number.NaN,
+      y: typeof point.y === "number" ? point.y : Number.NaN,
+    }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  return coordinates.length ? coordinates : undefined;
+}
+
+function parseBlock(value: unknown, index: number): { page: number; block: ParsedBlock } | null {
+  const item = asRecord(value);
+  if (!item) return null;
+  const page = typeof item.page === "number" && item.page > 0 ? Math.floor(item.page) : 1;
+  const content = asRecord(item.content);
+  const markdown = asContentString(content?.markdown)
+    || asContentString(item.markdown);
+  const text = asContentString(content?.text)
+    || asContentString(item.text)
+    || stripMarkup(markdown || asContentString(content?.html) || asContentString(item.html));
+  const html = asContentString(content?.html) || asContentString(item.html);
+  const effectiveMarkdown = markdown || text || stripMarkup(html);
+  if (!effectiveMarkdown && !text) return null;
+
+  return {
+    page,
+    block: {
+      blockId: String(item.id ?? index),
+      category: asContentString(item.category) || "unknown",
+      text: text || stripMarkup(effectiveMarkdown),
+      markdown: effectiveMarkdown,
+      coordinates: parseCoordinates(item.coordinates),
+    },
+  };
+}
+
+function fullDocumentContent(data: Record<string, unknown>): string {
+  const content = asRecord(data.content);
+  return [
+    content?.markdown,
+    content?.text,
+    content?.html,
+    data.markdown,
+    data.text,
+    data.html,
+    typeof data.content === "string" ? data.content : "",
+  ].map(asContentString).find(Boolean) || "";
+}
+
+function buildParsedPages(data: Record<string, unknown>): ParsedPage[] {
+  const elements = Array.isArray(data.elements) ? data.elements : [];
+  const reportedPageNumbers = elements
+    .map((element) => asRecord(element)?.page)
+    .filter((page): page is number => typeof page === "number" && page > 0)
+    .map((page) => Math.floor(page));
+  const grouped = new Map<number, ParsedBlock[]>();
+
+  elements.forEach((element, index) => {
+    const parsed = parseBlock(element, index);
+    if (!parsed) return;
+    const current = grouped.get(parsed.page) || [];
+    current.push(parsed.block);
+    grouped.set(parsed.page, current);
+  });
+
+  const pageNumbers = [...new Set([...reportedPageNumbers, ...grouped.keys()])].sort((a, b) => a - b);
+  const fullContent = fullDocumentContent(data);
+  if (!pageNumbers.length) {
+    if (!fullContent) throw new Error("안내문에서 읽을 수 있는 내용을 찾지 못했습니다.");
+    return [{
+      pageNumber: 1,
+      text: stripMarkup(fullContent),
+      markdown: fullContent,
+      blocks: [{
+        blockId: "document-content",
+        category: "document",
+        text: stripMarkup(fullContent),
+        markdown: fullContent,
+      }],
+    }];
+  }
+
+  return pageNumbers.map((sourcePageNumber, index) => {
+    const blocks = grouped.get(sourcePageNumber) || [];
+    let markdown = blocks.map((block) => block.markdown).filter(Boolean).join("\n");
+    let text = blocks.map((block) => block.text).filter(Boolean).join("\n");
+    if (!markdown && index === 0 && fullContent) markdown = fullContent;
+    if (!text && markdown) text = stripMarkup(markdown);
+    return {
+      // API의 물리 페이지 순서를 1부터 연속된 내부 페이지 번호로 정규화한다.
+      pageNumber: index + 1,
+      text,
+      markdown,
+      blocks,
+    };
+  });
+}
+
+export async function parseDocument(file: File): Promise<ParsedPage[]> {
   const formData = new FormData();
   formData.append("document", file, file.name);
   formData.append("model", "document-parse-260128");
@@ -24,28 +148,7 @@ export async function parseDocument(file: File): Promise<string> {
   }, { timeoutMs: 30_000, retries: 1, operation: "document_parse" });
 
   const data = await response.json() as Record<string, unknown>;
-  if (data.content && typeof data.content === "object") {
-    const content = data.content as Record<string, unknown>;
-    const structured = [content.markdown, content.html, content.text]
-      .find((value) => typeof value === "string" && value.trim());
-    if (typeof structured === "string") return structured.trim();
-  }
-  const direct = [data.content, data.markdown, data.html, data.text]
-    .find((value) => typeof value === "string" && value.trim());
-  if (typeof direct === "string") return direct.trim();
-  if (Array.isArray(data.elements)) {
-    const content = data.elements.map((element) => {
-      if (!element || typeof element !== "object") return "";
-      const item = element as Record<string, unknown>;
-      if (item.content && typeof item.content === "object") {
-        const nested = item.content as Record<string, unknown>;
-        return [nested.markdown, nested.html, nested.text].find((value) => typeof value === "string") || "";
-      }
-      return [item.markdown, item.html, item.content, item.text].find((value) => typeof value === "string") || "";
-    }).filter(Boolean).join("\n");
-    if (content.trim()) return content.trim();
-  }
-  throw new Error("안내문에서 읽을 수 있는 내용을 찾지 못했습니다.");
+  return buildParsedPages(data);
 }
 
 function cacheKey(instruction: ExtractedInstruction): string {

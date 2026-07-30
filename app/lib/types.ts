@@ -98,6 +98,26 @@ export interface ExtractionPayload {
   warnings: string[];
 }
 
+export interface ParsedCoordinate {
+  x: number;
+  y: number;
+}
+
+export interface ParsedBlock {
+  blockId: string;
+  category: string;
+  text: string;
+  markdown: string;
+  coordinates?: ParsedCoordinate[];
+}
+
+export interface ParsedPage {
+  pageNumber: number;
+  text: string;
+  markdown: string;
+  blocks: ParsedBlock[];
+}
+
 export interface AppliedAnswer {
   question_id: string;
   answer: AnswerValue;
@@ -142,7 +162,8 @@ export interface FinalGuideResult {
 }
 
 export interface ParseResponse {
-  content: string;
+  documentId: string;
+  pages: ParsedPage[];
   pageCount: number;
   extraction: ExtractionPayload;
 }
@@ -175,6 +196,7 @@ export type ChatReplyKind =
 export interface ChatEvidence {
   source: "맞춤 안내서" | "병원 안내문";
   text: string;
+  pageNumber?: number;
 }
 
 export interface ChatReply {

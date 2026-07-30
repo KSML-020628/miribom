@@ -1,4 +1,14 @@
-import { ACTION_IDS, CONDITION_IDS, type ActionId, type ConditionId, type ExtractedInstruction, type ExtractionPayload, type Importance } from "./types";
+import { parsedPageText, serializeParsedPages } from "./parsed-pages";
+import {
+  ACTION_IDS,
+  CONDITION_IDS,
+  type ActionId,
+  type ConditionId,
+  type ExtractedInstruction,
+  type ExtractionPayload,
+  type Importance,
+  type ParsedPage,
+} from "./types";
 import { fetchUpstage } from "./upstage-fetch";
 
 const INFORMATION_EXTRACT_URL = "https://api.upstage.ai/v1/information-extraction/chat/completions";
@@ -208,15 +218,25 @@ export async function extractDocument(file: File, parsedText: string): Promise<E
   };
 }
 
-export function verifyExtractionSources(extraction: ExtractionPayload, parsedText: string): ExtractionPayload {
+export function verifyExtractionSources(extraction: ExtractionPayload, pages: ParsedPage[]): ExtractionPayload {
+  const parsedText = serializeParsedPages(pages);
   let unverified = 0;
   const correctedInstructions = applyDeterministicContext(extraction.instructions, parsedText);
   const instructions = correctedInstructions.map((instruction) => {
-    const similarity = sourceSimilarity(instruction.source_text, parsedText);
+    const pageScores = pages.map((page) => ({
+      pageNumber: page.pageNumber,
+      similarity: sourceSimilarity(instruction.source_text, parsedPageText(page)),
+    })).sort((a, b) => b.similarity - a.similarity);
+    const bestPage = pageScores[0];
+    const similarity = bestPage?.similarity || 0;
     const sourceVerified = similarity >= 0.72;
     if (!sourceVerified) unverified += 1;
     return {
       ...instruction,
+      // 모델의 페이지 번호보다 실제 Parse 블록에서 근거 문장이 발견된 페이지를 우선한다.
+      source_page: sourceVerified
+        ? bestPage.pageNumber
+        : Math.min(pages.length, Math.max(1, instruction.source_page)),
       source_verified: sourceVerified,
       source_similarity: Number(similarity.toFixed(3)),
     };
@@ -259,18 +279,25 @@ function classifyAction(text: string): ActionId {
   return "OTHER_ACTION";
 }
 
-export function fallbackExtract(parsedText: string, pageCount: number): ExtractionPayload {
-  const cleanLines = parsedText.split(/\n+/).map((line) => line.replace(/^[#>*|\-\s]+/, "").trim()).filter((line) => line.length >= 8);
-  const candidates = cleanLines.filter((line) =>
-    /금식|물|죽|약|장정결|보호자|운전|치아|틀니|병원|내원|예약|검사\s*(전|당일|후)/.test(line),
+export function fallbackExtract(pages: ParsedPage[]): ExtractionPayload {
+  const parsedText = serializeParsedPages(pages);
+  const candidates = pages.flatMap((page) =>
+    parsedPageText(page)
+      .split(/\n+/)
+      .map((line) => line.replace(/^[#>*|\-\s]+/, "").trim())
+      .filter((line) => line.length >= 8)
+      .filter((line) =>
+        /금식|물|죽|약|장정결|보호자|운전|치아|틀니|병원|내원|예약|검사\s*(전|당일|후)/.test(line),
+      )
+      .map((line) => ({ line, pageNumber: page.pageNumber })),
   ).slice(0, 24);
-  const instructions = candidates.map((line, index): ExtractedInstruction => {
+  const instructions = candidates.map(({ line, pageNumber }, index): ExtractedInstruction => {
     const conditionId = classifyCondition(line);
     const actionId = classifyAction(line);
     const confirm = conditionId === "BLOOD_THINNER_COUNT" || /문의|확인|상의/.test(line);
     return {
       instruction_id: `F-${String(index + 1).padStart(3, "0")}`,
-      source_page: 1,
+      source_page: pageNumber,
       source_text: line,
       applicability: confirm ? "confirm_with_hospital" : conditionId === "NO_CONDITION" ? "all" : "conditional",
       condition_id: conditionId,
@@ -303,13 +330,22 @@ export function fallbackExtract(parsedText: string, pageCount: number): Extracti
   };
 }
 
-export function mergeExtractions(items: ExtractionPayload[], pageCount: number): ExtractionPayload {
+interface ExtractionPart {
+  extraction: ExtractionPayload;
+  pageOffset: number;
+  pageCount: number;
+}
+
+export function mergeExtractions(parts: ExtractionPart[]): ExtractionPayload {
+  const items = parts.map((part) => part.extraction);
   const firstValue = (field: keyof ExtractionPayload["document"]) =>
     items.map((item) => item.document[field]).find(Boolean) || "";
-  const instructions = items.flatMap((item, fileIndex) =>
-    item.instructions.map((instruction) => ({
+  const instructions = parts.flatMap((part, fileIndex) =>
+    part.extraction.instructions.map((instruction) => ({
       ...instruction,
-      source_page: Math.min(pageCount, Math.max(1, instruction.source_page + fileIndex)),
+      instruction_id: `D${fileIndex + 1}-${instruction.instruction_id}`,
+      source_page: part.pageOffset
+        + Math.min(part.pageCount, Math.max(1, instruction.source_page)),
     })),
   );
   const fallbackCount = items.filter((item) => item.mode === "fallback").length;

@@ -8,6 +8,7 @@ import type {
   FinalGuideResult,
   GuidePage,
   ParseResponse,
+  ParsedPage,
   ProcessingStage,
 } from "./lib/types";
 import GuideStep from "./ui/GuideStep";
@@ -29,7 +30,7 @@ export default function Home() {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const filesRef = useRef<UploadFile[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
-  const [sourceContent, setSourceContent] = useState("");
+  const [sourcePages, setSourcePages] = useState<ParsedPage[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [questionIndex, setQuestionIndex] = useState(0);
   const [guide, setGuide] = useState<FinalGuideResult | null>(null);
@@ -121,7 +122,7 @@ export default function Home() {
       const parseResponse = await fetch("/api/parse", { method: "POST", body: formData });
       if (!parseResponse.ok) throw new Error(await readError(parseResponse));
       const parsed = await parseResponse.json() as ParseResponse;
-      setSourceContent(parsed.content);
+      setSourcePages(parsed.pages);
 
       setStage("analyzing");
       const analyzeResponse = await fetch("/api/analyze", {
@@ -229,7 +230,7 @@ export default function Home() {
     files.forEach((item) => item.preview && URL.revokeObjectURL(item.preview));
     setFiles([]);
     setAnalysis(null);
-    setSourceContent("");
+    setSourcePages([]);
     setAnswers({});
     setGuide(null);
     setError("");
@@ -293,7 +294,7 @@ export default function Home() {
             onEditAnswers={() => { setQuestionIndex(0); setStep("questions"); }}
             onRestart={restart}
             onPrint={() => window.print()}
-            documentText={sourceContent}
+            documentPages={sourcePages}
             onSpeak={speak}
           />
         )}

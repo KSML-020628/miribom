@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { parseDocument } from "@/app/lib/upstage";
 import { extractDocument, fallbackExtract, mergeExtractions, verifyExtractionSources } from "@/app/lib/information-extract";
+import type { ParsedPage } from "@/app/lib/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 90;
+export const maxDuration = 180;
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
@@ -28,25 +30,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "파일 한 장의 크기는 20MB 이하여야 해요." }, { status: 413 });
     }
 
-    const pageResults = await Promise.all(files.map(async (file) => {
+    const fileResults: Array<{
+      pages: ParsedPage[];
+      extraction: Awaited<ReturnType<typeof extractDocument>>;
+    }> = [];
+    for (const file of files) {
       // 두 서비스는 서로 독립적이므로 동시에 실행해 전체 대기 시간을 줄입니다.
       const [parseResult, extractResult] = await Promise.allSettled([
         parseDocument(file),
         extractDocument(file, ""),
       ]);
       if (parseResult.status === "rejected") throw parseResult.reason;
-      const parsedText = parseResult.value;
+      const pages = parseResult.value;
       const extraction = extractResult.status === "fulfilled"
-        ? verifyExtractionSources(extractResult.value, parsedText)
-        : fallbackExtract(parsedText, 1);
+        ? verifyExtractionSources(extractResult.value, pages)
+        : fallbackExtract(pages);
       if (extractResult.status === "rejected") {
         console.error("Information Extract fallback:", extractResult.reason);
       }
-      return { parsedText, extraction };
-    }));
-    const content = pageResults.map((page, index) => `\n\n--- 안내문 ${index + 1}쪽 ---\n${page.parsedText}`).join("");
-    const extraction = mergeExtractions(pageResults.map((page) => page.extraction), files.length);
-    return NextResponse.json({ content, pageCount: files.length, extraction });
+      fileResults.push({ pages, extraction });
+    }
+
+    let pageOffset = 0;
+    const pages: ParsedPage[] = [];
+    const extractionParts = fileResults.map((result) => {
+      const currentOffset = pageOffset;
+      result.pages.forEach((page, index) => {
+        pages.push({
+          ...page,
+          pageNumber: currentOffset + index + 1,
+        });
+      });
+      pageOffset += result.pages.length;
+      return {
+        extraction: result.extraction,
+        pageOffset: currentOffset,
+        pageCount: result.pages.length,
+      };
+    });
+    const extraction = mergeExtractions(extractionParts);
+    return NextResponse.json({
+      documentId: `DOC-${randomUUID()}`,
+      pages,
+      pageCount: pages.length,
+      extraction,
+    });
   } catch (error) {
     console.error("Document parse failed:", error);
     return NextResponse.json(

@@ -6,11 +6,12 @@ import type {
   ChatReply,
   ChatTurn,
   FinalGuideResult,
+  ParsedPage,
 } from "@/app/lib/types";
 
 interface Props {
   guide: FinalGuideResult;
-  documentText: string;
+  documentPages: ParsedPage[];
   onSpeak: (text: string) => void;
 }
 
@@ -59,7 +60,7 @@ function toHistory(messages: ChatMessage[]): ChatTurn[] {
   }));
 }
 
-export default function GuideChat({ guide, documentText, onSpeak }: Props) {
+export default function GuideChat({ guide, documentPages, onSpeak }: Props) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -95,7 +96,7 @@ export default function GuideChat({ guide, documentText, onSpeak }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: nextQuestion,
-          documentText,
+          pages: documentPages,
           guide,
           history,
         }),
@@ -204,7 +205,7 @@ export default function GuideChat({ guide, documentText, onSpeak }: Props) {
                           <summary>안내문에서 찾은 내용</summary>
                           {message.reply.evidence.map((item, index) => (
                             <blockquote key={`${item.source}-${index}`}>
-                              <b>{item.source}</b>
+                              <b>{item.source}{item.pageNumber ? ` · ${item.pageNumber}쪽` : ""}</b>
                               <p>{item.text}</p>
                             </blockquote>
                           ))}

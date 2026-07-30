@@ -4,7 +4,9 @@ import type {
   ChatReply,
   ChatTurn,
   FinalGuideResult,
+  ParsedPage,
 } from "./types";
+import { parsedPageText } from "./parsed-pages";
 
 interface IntentRule {
   intent: Exclude<ChatIntent, "unknown">;
@@ -418,15 +420,18 @@ function containsRequiredFact(chunk: SearchChunk, classification: ClassifiedQues
 }
 
 export function retrieveChatEvidence(
-  documentText: string,
+  pages: ParsedPage[],
   guide: FinalGuideResult,
   classification: ClassifiedQuestion,
 ): ChatEvidence[] {
-  const documentChunks: SearchChunk[] = splitDocument(documentText).map((text) => ({
-    source: "병원 안내문",
-    text,
-    normalized: compact(text),
-  }));
+  const documentChunks: SearchChunk[] = pages.flatMap((page) =>
+    splitDocument(parsedPageText(page)).map((text) => ({
+      source: "병원 안내문" as const,
+      text,
+      pageNumber: page.pageNumber,
+      normalized: compact(text),
+    })),
+  );
 
   return [...guideChunks(guide), ...documentChunks]
     .map((chunk) => ({ chunk, score: scoreChunk(chunk, classification) }))
