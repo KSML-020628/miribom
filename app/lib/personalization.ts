@@ -53,6 +53,17 @@ export function buildAnalysisFromExtraction(extraction: ExtractionPayload, pageC
     });
   }
 
+  // 같은 환자에게 개수 질문(BLOOD_THINNER_COUNT)이 이미 나왔다면, 더 구체적인 그 질문만 남기고
+  // 중복되는 예/아니요 질문(BLOOD_THINNER_USE)은 같은 화면에 두 번 묻지 않도록 제거한다.
+  const countQuestion = [...questionMap.values()].find((question) => question.condition_id === "BLOOD_THINNER_COUNT");
+  if (countQuestion) {
+    for (const [key, question] of questionMap) {
+      if (question.condition_id === "BLOOD_THINNER_USE" && question.scope_target_id === countQuestion.scope_target_id) {
+        questionMap.delete(key);
+      }
+    }
+  }
+
   const unverifiedCount = extraction.instructions.filter((instruction) => !instruction.source_verified).length;
   const warnings = [...extraction.warnings];
   if (rejectedConditionCount) warnings.push(`근거 또는 행동 연결을 확인하지 못한 조건 ${rejectedConditionCount}개는 질문에서 제외했어요.`);

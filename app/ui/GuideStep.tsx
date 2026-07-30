@@ -1,14 +1,15 @@
 "use client";
 
 import {
+  buildSectionItems,
   visibleConfirmations,
   visiblePages,
 } from "@/app/lib/guide-visibility";
 import type { FinalGuideResult, ParsedPage } from "@/app/lib/types";
 import EasyReadPrintDocument from "./EasyReadPrintDocument";
+import GuideAnswerSummary from "./GuideAnswerSummary";
 import GuideChat from "./GuideChat";
 import GuideSection from "./GuideSection";
-import PersonalizePanel from "./PersonalizePanel";
 
 interface Props {
   guide: FinalGuideResult;
@@ -29,18 +30,20 @@ interface SectionGroup {
   pages: FinalGuideResult["pages"];
 }
 
-function groupGuidePages(guide: FinalGuideResult): SectionGroup[] {
+const PENDING_QUESTIONS_SECTION_ID = "guide-pending-questions";
+
+function groupGuidePages(pages: FinalGuideResult["pages"]): SectionGroup[] {
   const groups = new Map<string, FinalGuideResult["pages"]>();
-  for (const page of guide.pages) {
+  for (const page of pages) {
     if (page.section === "표지") continue;
     const current = groups.get(page.section) || [];
     current.push(page);
     groups.set(page.section, current);
   }
-  return [...groups.entries()].map(([title, pages], index) => ({
+  return [...groups.entries()].map(([title, groupPages], index) => ({
     id: `guide-section-${index + 1}`,
     title,
-    pages,
+    pages: groupPages,
   }));
 }
 
@@ -63,11 +66,41 @@ export default function GuideStep({
     pages: shownPages,
     hospital_confirmation: shownConfirmations,
   };
-  const groups = groupGuidePages(shownGuide);
+
+  // 답이 필요한 조건부 안내는 아직 보이지 않으므로, 질문 카드 배치는 전체(미필터) 페이지를 기준으로 계산한다.
+  // 같은 질문이 여러 단계를 여는 경우에도 처음 등장하는 자리에만 카드를 한 번 끼워 넣는다.
+  const placedQuestionIds = new Set<string>();
+  const groups = groupGuidePages(guide.pages)
+    .map((group) => ({
+      ...group,
+      items: buildSectionItems(group.pages, guide.personalization_questions, answers, placedQuestionIds),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const orphanQuestions = guide.personalization_questions.filter(
+    (question) => !answers[question.question_id] && !placedQuestionIds.has(question.question_id),
+  );
+
+  const questionSectionId = new Map<string, string>();
+  for (const group of groups) {
+    for (const item of group.items) {
+      if (item.kind === "question") questionSectionId.set(item.question.question_id, group.id);
+    }
+  }
+  for (const question of orphanQuestions) questionSectionId.set(question.question_id, PENDING_QUESTIONS_SECTION_ID);
+
   const keyActions = shownPages.filter((page) => page.section !== "표지").slice(0, 3);
 
   function moveToSection(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function editAnswer(questionId: string) {
+    onAnswer(questionId, "");
+    window.setTimeout(() => {
+      const sectionId = questionSectionId.get(questionId);
+      if (sectionId) moveToSection(sectionId);
+    }, 60);
   }
 
   return (
@@ -96,11 +129,10 @@ export default function GuideStep({
           </dl>
         </header>
 
-        <PersonalizePanel
+        <GuideAnswerSummary
           questions={guide.personalization_questions}
           answers={answers}
-          onAnswer={onAnswer}
-          onSpeak={onSpeak}
+          onEdit={editAnswer}
         />
 
         {keyActions.length > 0 && (
@@ -117,8 +149,11 @@ export default function GuideStep({
           </section>
         )}
 
-        {groups.length > 1 && (
+        {(groups.length > 1 || orphanQuestions.length > 0) && (
           <nav className="guideToc interactiveOnly" aria-label="안내서 빠른 이동">
+            {orphanQuestions.length > 0 && (
+              <button type="button" onClick={() => moveToSection(PENDING_QUESTIONS_SECTION_ID)}>확인이 필요한 질문</button>
+            )}
             {groups.map((group) => (
               <button type="button" key={group.id} onClick={() => moveToSection(group.id)}>
                 {group.title}
@@ -131,8 +166,24 @@ export default function GuideStep({
         )}
 
         <div className="guideSections">
+          {orphanQuestions.length > 0 && (
+            <GuideSection
+              id={PENDING_QUESTIONS_SECTION_ID}
+              title="확인이 필요한 질문"
+              items={orphanQuestions.map((question) => ({ kind: "question" as const, question }))}
+              onAnswer={onAnswer}
+              onSpeak={onSpeak}
+            />
+          )}
           {groups.map((group) => (
-            <GuideSection key={group.id} id={group.id} title={group.title} pages={group.pages} />
+            <GuideSection
+              key={group.id}
+              id={group.id}
+              title={group.title}
+              items={group.items}
+              onAnswer={onAnswer}
+              onSpeak={onSpeak}
+            />
           ))}
         </div>
 

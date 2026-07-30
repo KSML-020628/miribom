@@ -580,28 +580,53 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .guideDocumentFooter { margin-top: 48px; padding-top: 22px; color: var(--muted); border-top: 2px solid var(--line); font-size: var(--font-caption); line-height: 1.6; font-weight: 700; }
 .verticalGuideScreen > .guideBottomActions { width: min(760px, 100%); flex-wrap: wrap; margin: 22px auto 0; }
 
-/* 최종 안내서에서 답을 바로 바꾸는 선택 영역 */
-.personalizePanel {
+/* 최종 안내서 위쪽의 진행 안내 · 완료된 답변 요약 */
+.guideAnswerSummary {
   width: min(760px, 100%);
   margin: 0 auto 22px;
-  overflow: hidden;
+  padding: 20px 22px;
   background: var(--paper);
   border: 2px solid var(--blue);
   border-radius: 14px;
 }
-.personalizePanelHeader {
+.guideAnswerSummary p { margin: 0 0 4px; color: var(--blue-dark); font-size: var(--font-card-title); font-weight: 900; }
+.guideAnswerSummary.pending span { display: block; color: var(--muted); font-weight: 750; }
+.guideAnswerSummary.complete ul { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.guideAnswerSummary.complete li {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 20px 22px;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--canvas);
+  border-radius: 10px;
 }
-.personalizePanelHeader p { margin: 0 0 4px; color: var(--blue-dark); font-weight: 900; }
-.personalizePanelHeader h2 { margin: 0; font-size: var(--font-card-title); }
-.personalizePanelHeader span { display: block; margin-top: 6px; color: var(--muted); font-weight: 750; }
-.personalizePanelHeader > button,
+.guideAnswerSummary.complete li span { color: var(--ink); font-weight: 750; }
+.guideAnswerSummary.complete li button {
+  min-height: 40px;
+  padding: 0 14px;
+  color: var(--blue-dark);
+  background: var(--paper);
+  border: 2px solid var(--blue);
+  border-radius: 8px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+/* 안내서 안에서 바로 답하는 질문 카드 */
+.personalizeQuestion {
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  background: var(--paper);
+  border: 3px solid var(--line);
+  border-radius: 14px;
+}
+.personalizeQuestion legend { padding: 0; color: var(--ink); font-size: 1.55rem; line-height: 1.35; font-weight: 950; }
+.personalizeQuestion > p { margin: 8px 0 14px; color: var(--ink); font-size: var(--font-body); font-weight: 700; }
 .personalizeListen {
-  min-height: 48px;
+  min-height: 44px;
+  margin-bottom: 14px;
   padding: 0 16px;
   color: var(--blue-dark);
   background: var(--paper);
@@ -610,19 +635,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   font-weight: 900;
   cursor: pointer;
 }
-.personalizeQuestions { padding: 22px; border-top: 2px solid var(--line); }
-.personalizeHelp { margin: 0 0 20px; color: var(--ink); font-size: var(--font-body); font-weight: 800; }
-.personalizeQuestion {
-  min-width: 0;
-  margin: 0;
-  padding: 24px 0;
-  border: 0;
-  border-top: 2px solid var(--line);
-}
-.personalizeQuestion:first-of-type { border-top: 0; }
-.personalizeQuestion legend { padding: 0; color: var(--ink); font-size: 1.55rem; line-height: 1.35; font-weight: 950; }
-.personalizeQuestion > p { margin: 8px 0 14px; color: var(--ink); font-size: var(--font-body); font-weight: 700; }
-.personalizeListen { min-height: 44px; margin-bottom: 14px; }
 .personalizeChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .personalizeChoices button {
   min-height: 72px;
@@ -635,35 +647,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   cursor: pointer;
 }
 .personalizeChoices button span { display: block; margin-bottom: 4px; font-size: 1.45rem; font-weight: 950; }
-.personalizeChoices button.selected {
-  color: var(--blue-dark);
-  background: var(--blue-soft);
-  border-color: var(--blue-dark);
-  box-shadow: inset 0 0 0 2px var(--blue-dark);
-}
-.personalizeUnknown {
-  padding: 12px;
-  color: var(--amber) !important;
-  background: var(--amber-soft);
-  border-left: 5px solid var(--amber);
-}
-.personalizeUnanswered,
-.personalizeFeedback {
-  margin: 14px 0 0 !important;
-  padding: 11px 12px;
-  font-size: 1rem !important;
-  font-weight: 850 !important;
-}
-.personalizeUnanswered {
-  color: var(--amber) !important;
-  background: var(--amber-soft);
-  border-left: 5px solid var(--amber);
-}
-.personalizeFeedback {
-  color: var(--green) !important;
-  background: var(--green-soft);
-  border-left: 5px solid var(--green);
-}
 .pdfAction { display: grid; justify-items: end; gap: 5px; }
 .pdfAction small { max-width: 230px; color: var(--muted); font-size: .76rem; line-height: 1.35; text-align: right; font-weight: 700; }
 
@@ -991,9 +974,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .pageOverview { grid-template-columns: 1fr; }
   .guideBottomActions { flex-direction: column; margin-bottom: 85px; }
   .guideBottomActions button { width: 100%; }
-  .personalizePanelHeader { align-items: flex-start; }
-  .personalizePanelHeader > button { flex: 0 0 auto; }
-  .personalizeQuestions { padding: 18px 15px; }
   .personalizeChoices { grid-template-columns: 1fr; }
   .pdfAction { justify-items: stretch; width: 100%; }
   .pdfAction small { max-width: none; text-align: left; }
@@ -2097,8 +2077,9 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     border-radius: 15px;
   }
 
-  .personalizePanel {
+  .guideAnswerSummary {
     margin: 0 0 24px;
+    padding: 18px;
     color: var(--app-white);
     background: var(--app-blue-card);
     border: 0;
@@ -2106,22 +2087,30 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     box-shadow: none;
   }
 
-  .personalizePanelHeader {
-    padding: 18px;
-    align-items: center;
-  }
-
-  .personalizePanelHeader p,
-  .personalizePanelHeader h2,
-  .personalizePanelHeader span {
+  .guideAnswerSummary p {
     color: var(--app-white);
-  }
-
-  .personalizePanelHeader h2 {
     font-size: 1.45rem;
   }
 
-  .personalizePanelHeader > button,
+  .guideAnswerSummary.pending span {
+    color: rgba(255, 255, 255, .85);
+  }
+
+  .guideAnswerSummary.complete li {
+    background: rgba(255, 255, 255, .12);
+  }
+
+  .guideAnswerSummary.complete li span {
+    color: var(--app-white);
+  }
+
+  .guideAnswerSummary.complete li button {
+    color: var(--app-text-blue);
+    background: var(--app-yellow);
+    border: 0;
+    border-radius: 999px;
+  }
+
   .personalizeListen {
     color: var(--app-text-blue);
     background: var(--app-yellow);
@@ -2129,17 +2118,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     border-radius: 999px;
   }
 
-  .personalizeQuestions {
-    padding: 16px;
-    border-top: 2px solid rgba(255, 255, 255, .3);
-  }
-
-  .personalizeHelp {
-    color: var(--app-white);
-  }
-
   .personalizeQuestion {
-    margin-bottom: 14px;
     padding: 18px 14px;
     color: var(--app-text-dark);
     background: rgba(255, 255, 255, .9);
@@ -2167,27 +2146,14 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     border-radius: 14px;
   }
 
-  .personalizeChoices button:nth-child(1) {
+  .personalizeChoices button[data-tone="positive"] {
     color: #075e35;
     border-color: var(--app-success);
   }
 
-  .personalizeChoices button:nth-child(2) {
+  .personalizeChoices button[data-tone="negative"] {
     color: #a51f1f;
     border-color: var(--app-danger);
-  }
-
-  .personalizeChoices button.selected {
-    color: var(--app-white);
-    background: var(--app-text-blue);
-    border-color: var(--app-text-blue);
-    box-shadow: 0 0 0 3px var(--app-yellow);
-  }
-
-  .personalizeUnanswered,
-  .personalizeFeedback,
-  .personalizeUnknown {
-    font-size: .95rem;
   }
 
   .guideKeySummary,

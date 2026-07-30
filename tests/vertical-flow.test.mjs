@@ -39,13 +39,27 @@ assert.match(guide, /className="verticalGuideDocument screenOnly"/);
 assert.match(guide, /PDF 저장/);
 assert.match(guide, /EasyReadPrintDocument/);
 assert.match(guide, /visiblePages/);
-assert.match(guide, /PersonalizePanel/);
+assert.match(guide, /buildSectionItems/);
+assert.match(guide, /GuideAnswerSummary/);
+assert.doesNotMatch(guide, /PersonalizePanel/);
 assert.doesNotMatch(guide, /pageArrow|bookViewer|onPage|pageIndex|overview|carousel|currentSlide/);
 
 const instruction = read("app/ui/GuideInstructionBlock.tsx");
 assert.match(instruction, /className=\{`guideInstruction/);
 assert.match(instruction, /PictureCard/);
 assert.match(instruction, /instructionTime/);
+
+const section = read("app/ui/GuideSection.tsx");
+assert.match(section, /InlineGuideQuestion/);
+assert.match(section, /item\.kind === "page"/);
+
+const inlineQuestion = read("app/ui/InlineGuideQuestion.tsx");
+assert.match(inlineQuestion, /data-tone=\{optionTone\(option\.value\)\}/);
+assert.match(inlineQuestion, /personalizeQuestion/);
+
+const visibility = read("app/lib/guide-visibility.ts");
+assert.match(visibility, /export function buildSectionItems/);
+assert.match(visibility, /placedQuestionIds/);
 
 const css = read("app/globals.css");
 assert.match(css, /\.verticalGuideDocument\s*\{[\s\S]*?width: min\(760px, 100%\)/);
@@ -56,4 +70,4 @@ assert.match(css, /\.instructionContent \{ display: grid/);
 assert.match(css, /\.easyReadPrintPage\s*\{[\s\S]*?width: 210mm/);
 assert.match(css, /\.easyReadPrintContent\s*\{[\s\S]*?grid-template-columns: 64mm/);
 
-console.log("vertical UI flow fixtures: 36 passed");
+console.log("vertical UI flow fixtures: 48 passed");

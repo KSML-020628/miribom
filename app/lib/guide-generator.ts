@@ -1,4 +1,5 @@
 import { ACTION_IMAGE_TAGS, ACTION_SORT_ORDER } from "./condition-catalog";
+import { stageOrder } from "./stage-order";
 import { simplifySelectedInstructions } from "./upstage";
 import type {
   DocumentSummary,
@@ -9,15 +10,6 @@ import type {
   PersonalizationQuestion,
   ProcedureGroup,
 } from "./types";
-
-const STAGE_ORDER: Record<string, number> = {
-  "지금 확인": 5,
-  "검사 3일 전": 10,
-  "검사 전날": 20,
-  "검사 당일": 30,
-  "병원에 올 때": 40,
-  "검사 후": 50,
-};
 
 function questionForCondition(instruction: ExtractedInstruction, questions: PersonalizationQuestion[]): PersonalizationQuestion | undefined {
   return questions.find((question) => question.linked_instruction_ids.includes(instruction.instruction_id))
@@ -185,7 +177,7 @@ export async function buildFinalGuide(
     return hour * 60 + Number(match[3] || 0);
   };
   const ordered = included.sort((left, right) =>
-    (STAGE_ORDER[left.when_stage] ?? 99) - (STAGE_ORDER[right.when_stage] ?? 99) ||
+    stageOrder(left.when_stage) - stageOrder(right.when_stage) ||
     timeOrder(left) - timeOrder(right) ||
     ACTION_SORT_ORDER[left.action_id] - ACTION_SORT_ORDER[right.action_id],
   );

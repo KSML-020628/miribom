@@ -31,7 +31,7 @@ assert.match(alwaysVisibleReview, /검사 날짜 바로 선택/);
 const guideSource = read("app/ui/GuideStep.tsx");
 assert.match(guideSource, /className="verticalGuideDocument screenOnly"/);
 assert.match(guideSource, /speaking \? "멈추기" : "전체 듣기"/);
-assert.match(guideSource, /PersonalizePanel/);
+assert.match(guideSource, /GuideAnswerSummary/);
 
 const css = read("app/globals.css");
 assert.match(css, /--font-time:/);
