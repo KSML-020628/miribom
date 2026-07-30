@@ -8,6 +8,7 @@ node_modules/
 .next/
 out/
 .vercel/
+tmp/
 *.tsbuildinfo
 
 # 로그와 운영체제 파일

@@ -5,8 +5,10 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 
 const home = read("app/ui/HomeUploadStep.tsx");
-assert.match(home, /병원 안내문을<br \/>쉽게 바꿔 드려요/);
-assert.equal((home.match(/className="uploadChoiceCard/g) || []).length, 2);
+assert.match(home, /병원에서 검사 전<br \/>/);
+assert.match(home, /안내문 받으셨죠\?/);
+assert.match(home, /className="uploadPrimaryButton"/);
+assert.match(home, /className="uploadMethodSheet"/);
 assert.match(home, /aria-label="저장된 안내문 사진 선택"/);
 assert.match(home, /aria-label="카메라로 안내문 사진 찍기"/);
 assert.match(home, /accept="image\/\*,\.pdf,application\/pdf"/);
@@ -15,8 +17,8 @@ assert.match(home, /capture="environment"/);
 assert.doesNotMatch(home, /dropArea|dragOver|기존 프로젝트/);
 
 const preview = read("app/ui/UploadPreviewStep.tsx");
-assert.match(preview, /안내문을 확인해 주세요/);
-assert.match(preview, /안내문 쉽게 바꾸기/);
+assert.match(preview, /안내문 \{files\.length\}장을/);
+assert.match(preview, /문서 분석하기/);
 assert.match(preview, /한 장 더 추가/);
 assert.match(preview, /다시 찍기/);
 assert.match(preview, /onMove/);

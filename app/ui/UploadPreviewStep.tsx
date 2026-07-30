@@ -35,8 +35,10 @@ export default function UploadPreviewStep({
         <button type="button" onClick={onBack}>← 처음으로</button>
       </div>
       <div className="screenIntro centered">
-        <h1 id="preview-heading" data-screen-title tabIndex={-1}>안내문을 확인해 주세요</h1>
-        <p>종이 전체와 글자가 잘 보이나요?</p>
+        <h1 id="preview-heading" data-screen-title tabIndex={-1}>
+          안내문 {files.length}장을<br />올렸어요
+        </h1>
+        <p>종이 전체와 글자가 잘 보이는지 확인해 주세요.</p>
       </div>
 
       <ol className="previewList" aria-label="선택한 안내문">
@@ -49,7 +51,6 @@ export default function UploadPreviewStep({
             </div>
             <div className="previewMeta">
               <b>{index + 1}번째 안내문</b>
-              <span>{item.file.name}</span>
             </div>
             <div className="previewControls">
               <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} aria-label={`${index + 1}번째 안내문을 앞으로 이동`}>↑</button>
@@ -73,7 +74,7 @@ export default function UploadPreviewStep({
       </aside>
 
       <button className="mainAction previewAnalyzeButton" type="button" disabled={!files.length || busy} onClick={onAnalyze}>
-        안내문 쉽게 바꾸기
+        문서 분석하기
       </button>
     </section>
   );

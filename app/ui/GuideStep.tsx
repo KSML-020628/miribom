@@ -83,16 +83,9 @@ export default function GuideStep({
         </div>
       </div>
 
-      <PersonalizePanel
-        questions={guide.personalization_questions}
-        answers={answers}
-        onAnswer={onAnswer}
-        onSpeak={onSpeak}
-      />
-
       <article className="verticalGuideDocument screenOnly">
         <header className="guideDocumentHeader">
-          <p>나를 위한 쉬운 안내서</p>
+          <p>나만의 안내서</p>
           <h1 id="guide-heading" data-screen-title tabIndex={-1}>
             {guide.project.procedure_name}<br />준비 안내
           </h1>
@@ -102,6 +95,13 @@ export default function GuideStep({
             {guide.project.procedure_date && <div><dt>날짜</dt><dd>{guide.project.procedure_date}</dd></div>}
           </dl>
         </header>
+
+        <PersonalizePanel
+          questions={guide.personalization_questions}
+          answers={answers}
+          onAnswer={onAnswer}
+          onSpeak={onSpeak}
+        />
 
         {keyActions.length > 0 && (
           <section className="guideKeySummary" aria-labelledby="key-summary-heading">

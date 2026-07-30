@@ -373,13 +373,11 @@ export default function Home() {
         {activeProcessing && (
           <div className="processingOverlay" role="status" aria-live="polite">
             <div className="processingCard">
-              <span className="loadingMark" aria-hidden="true">···</span>
-              <h2>{activeProcessing.title}</h2>
-              <p>{activeProcessing.detail}</p>
-              <div className="loadingProgressMeta" aria-hidden="true">
-                <span>처리 중</span>
-                <b>{Math.round(loadingProgress)}%</b>
+              <div className="analysisWave" aria-hidden="true">
+                <span /><span /><span /><span /><span /><span /><span /><span /><span />
               </div>
+              <h2>{activeProcessing.title}</h2>
+              <p className="srOnly">{activeProcessing.detail}</p>
               <div
                 className="loadingBar"
                 role="progressbar"
