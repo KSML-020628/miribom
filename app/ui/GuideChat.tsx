@@ -13,6 +13,8 @@ interface Props {
   guide: FinalGuideResult;
   documentPages: ParsedPage[];
   onSpeak: (text: string) => void;
+  speaking: boolean;
+  onStopSpeak: () => void;
 }
 
 interface ChatMessage {
@@ -48,6 +50,13 @@ const STARTER_QUESTIONS = [
   "병원에는 몇 시에 가요?",
 ];
 
+const EVIDENCE_STATUS_COPY: Record<ChatReply["evidenceStatus"], { symbol: string; label: string }> = {
+  FOUND_IN_APPLIED_GUIDE: { symbol: "✓", label: "맞춤 안내에서 찾았어요" },
+  FOUND_IN_DOCUMENT: { symbol: "✓", label: "안내문에서 찾았어요" },
+  NOT_FOUND: { symbol: "?", label: "안내문에서 찾지 못했어요" },
+  MEDICAL_CONFIRMATION_REQUIRED: { symbol: "!", label: "병원 확인이 필요해요" },
+};
+
 function messageId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -60,7 +69,7 @@ function toHistory(messages: ChatMessage[]): ChatTurn[] {
   }));
 }
 
-export default function GuideChat({ guide, documentPages, onSpeak }: Props) {
+export default function GuideChat({ guide, documentPages, onSpeak, speaking, onStopSpeak }: Props) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -193,12 +202,17 @@ export default function GuideChat({ guide, documentPages, onSpeak }: Props) {
                   <p>{message.text}</p>
                   {message.reply && (
                     <>
+                      <div className={`chatEvidenceStatus ${message.reply.evidenceStatus}`}>
+                        <b aria-hidden="true">{EVIDENCE_STATUS_COPY[message.reply.evidenceStatus].symbol}</b>
+                        <span>{EVIDENCE_STATUS_COPY[message.reply.evidenceStatus].label}</span>
+                      </div>
                       <button
                         className="chatListenButton"
                         type="button"
-                        onClick={() => onSpeak(message.text)}
+                        onClick={() => speaking ? onStopSpeak() : onSpeak(message.text)}
+                        aria-label={speaking ? "답변 읽기 멈추기" : "답변 듣기"}
                       >
-                        ▶ 답변 듣기
+                        <span aria-hidden="true">{speaking ? "⏹" : "🔊"}</span> {speaking ? "멈추기" : "답변 듣기"}
                       </button>
                       {message.reply.evidence.length > 0 && (
                         <details className="chatEvidence">

@@ -92,12 +92,19 @@ export function buildGroundedReply(
   evidence: ChatEvidence[],
   understoodAs?: string,
 ): ChatReply {
+  const sourceInstructionIds = [...new Set(evidence.flatMap((item) => item.sourceInstructionIds || []))];
+  const sourceDocumentIds = [...new Set(evidence.flatMap((item) => item.sourceDocumentIds || []))];
   return {
     kind: "grounded",
     answer,
     intent,
     understood_as: understoodAs,
     evidence,
+    evidenceStatus: evidence.some((item) => item.source === "맞춤 안내서")
+      ? "FOUND_IN_APPLIED_GUIDE"
+      : "FOUND_IN_DOCUMENT",
+    sourceInstructionIds,
+    sourceDocumentIds,
     suggestions: [
       "물은 언제까지 마셔요?",
       "먹는 약은 어떻게 해요?",

@@ -51,7 +51,14 @@ function safePages(value: unknown): ParsedPage[] {
       ? page.text.slice(0, Math.max(0, remainingLength))
       : "";
     remainingLength -= text.length;
-    pages.push({ pageNumber, markdown, text, blocks: [] });
+    pages.push({
+      pageNumber,
+      markdown,
+      text,
+      blocks: [],
+      documentId: typeof page.documentId === "string" ? page.documentId : undefined,
+      sourceFileName: typeof page.sourceFileName === "string" ? page.sourceFileName : undefined,
+    });
   }
   return pages;
 }

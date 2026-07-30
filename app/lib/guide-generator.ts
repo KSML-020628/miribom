@@ -266,6 +266,7 @@ export async function buildFinalGuide(
             : "",
       procedure_id: instruction.procedure_id,
       source_document_ids: instruction.source_document_ids,
+      source_instruction_ids: [instruction.instruction_id],
     };
   });
 

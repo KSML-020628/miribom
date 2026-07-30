@@ -24,6 +24,8 @@ interface Props {
   onPrint: () => void;
   documentPages: ParsedPage[];
   onSpeak: (text: string) => void;
+  speaking: boolean;
+  onStopSpeaking: () => void;
 }
 
 function compactWhen(section: string, when?: string): string {
@@ -32,13 +34,13 @@ function compactWhen(section: string, when?: string): string {
   return trimmed.startsWith(section) ? trimmed.slice(section.length).trim() : trimmed;
 }
 
-function GuidePageView({ page, total, onListen }: { page: GuidePage; total: number; onListen: () => void }) {
+function GuidePageView({ page, total, onListen, speaking = false }: { page: GuidePage; total: number; onListen: () => void; speaking?: boolean }) {
   const importance = IMPORTANCE[page.importance];
   const displayWhen = compactWhen(page.section, page.when);
   return (
     <article className={`guidePage ${page.importance}`}>
       <header className="guidePageHeader">
-        <div><span>{page.section}</span>{displayWhen && <b>{displayWhen}</b>}</div>
+        <div><span>{page.section}</span>{displayWhen && <b className="instructionTime">{displayWhen}</b>}</div>
         <small>{page.page_number} / {total}</small>
       </header>
       <div className="guidePageBody">
@@ -50,7 +52,9 @@ function GuidePageView({ page, total, onListen }: { page: GuidePage; total: numb
           {page.personalized && page.personalization_note && <aside>맞춤 안내 · {page.personalization_note}</aside>}
         </div>
       </div>
-      <button className="pageListen" type="button" onClick={onListen}>▶ 이 페이지 읽기</button>
+      <button className="pageListen" type="button" onClick={onListen} aria-label={speaking ? "읽기 멈추기" : "이 페이지 읽기"}>
+        <span aria-hidden="true">{speaking ? "⏹" : "🔊"}</span> {speaking ? "읽기 멈추기" : "듣기"}
+      </button>
     </article>
   );
 }
@@ -68,14 +72,18 @@ export default function GuideStep({
   onPrint,
   documentPages,
   onSpeak,
+  speaking,
+  onStopSpeaking,
 }: Props) {
   const page = guide.pages[pageIndex];
   return (
     <section className="guideScreen" aria-labelledby="guide-heading">
       <div className="guideToolbar">
-        <div><p className="eyebrow">나를 위한 쉬운 안내서</p><h1 id="guide-heading">{guide.project.procedure_name} 준비 안내</h1></div>
+        <div><p className="eyebrow">나를 위한 쉬운 안내서</p><h1 id="guide-heading" data-screen-title tabIndex={-1}>{guide.project.procedure_name} 준비 안내</h1></div>
         <div className="guideActions">
-          <button type="button" onClick={onListenAll}>▶ 처음부터 읽기</button>
+          <button type="button" onClick={speaking ? onStopSpeaking : onListenAll}>
+            <span aria-hidden="true">{speaking ? "⏹" : "🔊"}</span> {speaking ? "멈추기" : "전체 듣기"}
+          </button>
           <button type="button" onClick={onOverview}>{overview ? "한 장씩 보기" : "전체 페이지"}</button>
           <button className="pdfButton" type="button" onClick={onPrint}>PDF로 저장하기</button>
         </div>
@@ -92,13 +100,13 @@ export default function GuideStep({
       ) : (
         <div className="bookViewer">
           <button className="pageArrow previous" type="button" disabled={pageIndex === 0} onClick={() => onPage(pageIndex - 1)} aria-label="이전 페이지">‹</button>
-          <GuidePageView page={page} total={guide.pages.length} onListen={() => onListenPage(page)} />
+          <GuidePageView page={page} total={guide.pages.length} speaking={speaking} onListen={() => speaking ? onStopSpeaking() : onListenPage(page)} />
           <button className="pageArrow next" type="button" disabled={pageIndex === guide.pages.length - 1} onClick={() => onPage(pageIndex + 1)} aria-label="다음 페이지">›</button>
         </div>
       )}
 
       <div className="guideBottomActions">
-        <GuideChat guide={guide} documentPages={documentPages} onSpeak={onSpeak} />
+        <GuideChat guide={guide} documentPages={documentPages} onSpeak={onSpeak} speaking={speaking} onStopSpeak={onStopSpeaking} />
         <button type="button" onClick={onEditAnswers}>답변 다시 보기</button>
         <button type="button" onClick={onRestart}>새 안내문 만들기</button>
       </div>

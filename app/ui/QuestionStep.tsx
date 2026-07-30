@@ -11,14 +11,17 @@ interface Props {
   onAnswer: (value: string) => void;
   onBack: () => void;
   onListen: () => void;
+  speaking: boolean;
 }
 
-export default function QuestionStep({ question, index, total, selected, onAnswer, onBack, onListen }: Props) {
+export default function QuestionStep({ question, index, total, selected, onAnswer, onBack, onListen, speaking }: Props) {
   return (
     <section className="questionScreen" aria-labelledby="question-heading">
       <div className="topTools">
         <button type="button" onClick={onBack}>← 이전</button>
-        <button type="button" onClick={onListen}>▶ 질문 읽기</button>
+        <button type="button" onClick={onListen} aria-label={speaking ? "읽기 멈추기" : "현재 질문 듣기"}>
+          <span aria-hidden="true">{speaking ? "⏹" : "🔊"}</span> {speaking ? "멈추기" : "듣기"}
+        </button>
       </div>
       <div className="questionProgress" aria-label={`${total}개 질문 중 ${index + 1}번째`}>
         <strong>{index + 1} / {total}</strong>
@@ -26,7 +29,7 @@ export default function QuestionStep({ question, index, total, selected, onAnswe
       </div>
       <PictureCard tag={question.image_tag} />
       <div className="questionCopy">
-        <h1 id="question-heading">{question.question}</h1>
+        <h1 id="question-heading" data-screen-title tabIndex={-1}>{question.question}</h1>
         {question.helper_text && <p>{question.helper_text}</p>}
       </div>
       <div className="answerChoices">

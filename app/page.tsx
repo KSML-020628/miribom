@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type {
   AnalysisResult,
+  AppointmentPeriod,
   ApiError,
   AppStep,
   FinalGuideResult,
+  DocumentValidationStatus,
   GuidePage,
   ParseResponse,
   ParsedPage,
@@ -39,15 +41,37 @@ export default function Home() {
   const [stage, setStage] = useState<ProcessingStage>("idle");
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState("");
+  const [errorKind, setErrorKind] = useState<DocumentValidationStatus | null>(null);
   const [fontSize, setFontSize] = useState<FontSize>("normal");
   const [highContrast, setHighContrast] = useState(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => { filesRef.current = files; }, [files]);
   useEffect(() => () => filesRef.current.forEach((item) => item.preview && URL.revokeObjectURL(item.preview)), []);
   useEffect(() => {
+    const savedFontSize = window.localStorage.getItem("miribom-font-size");
+    const savedContrast = window.localStorage.getItem("miribom-high-contrast");
+    if (savedFontSize === "normal" || savedFontSize === "large" || savedFontSize === "xlarge") {
+      setFontSize(savedFontSize);
+    }
+    setHighContrast(savedContrast === "true");
+    setPreferencesReady(true);
+  }, []);
+  useEffect(() => {
     document.documentElement.dataset.fontSize = fontSize;
     document.documentElement.dataset.contrast = highContrast ? "high" : "normal";
-  }, [fontSize, highContrast]);
+    if (preferencesReady) {
+      window.localStorage.setItem("miribom-font-size", fontSize);
+      window.localStorage.setItem("miribom-high-contrast", String(highContrast));
+    }
+  }, [fontSize, highContrast, preferencesReady]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      document.querySelector<HTMLElement>("[data-screen-title]")?.focus();
+    }, 30);
+    return () => window.clearTimeout(timer);
+  }, [step, questionIndex]);
   useEffect(() => {
     const progressConfig = {
       parsing: { start: 6, ceiling: 76 },
@@ -102,9 +126,9 @@ export default function Home() {
     });
   }
 
-  async function readError(response: Response): Promise<string> {
+  async function readError(response: Response): Promise<ApiError> {
     const payload = await response.json().catch(() => ({})) as Partial<ApiError>;
-    return payload.error || "요청을 처리하지 못했어요.";
+    return { error: payload.error || "요청을 처리하지 못했어요.", validationStatus: payload.validationStatus };
   }
 
   async function finishLoadingProgress() {
@@ -115,12 +139,17 @@ export default function Home() {
   async function analyze() {
     if (!files.length) return;
     setError("");
+    setErrorKind(null);
     setStage("parsing");
     try {
       const formData = new FormData();
       files.forEach((item) => formData.append("documents", item.file));
       const parseResponse = await fetch("/api/parse", { method: "POST", body: formData });
-      if (!parseResponse.ok) throw new Error(await readError(parseResponse));
+      if (!parseResponse.ok) {
+        const apiError = await readError(parseResponse);
+        setErrorKind(apiError.validationStatus || null);
+        throw new Error(apiError.error);
+      }
       const parsed = await parseResponse.json() as ParseResponse;
       setSourcePages(parsed.pages);
 
@@ -130,7 +159,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parsed),
       });
-      if (!analyzeResponse.ok) throw new Error(await readError(analyzeResponse));
+      if (!analyzeResponse.ok) throw new Error((await readError(analyzeResponse)).error);
       const nextAnalysis = await analyzeResponse.json() as AnalysisResult;
       setAnalysis(nextAnalysis);
       setAnswers({});
@@ -161,7 +190,7 @@ export default function Home() {
           conflicts: analysis.conflicts,
         }),
       });
-      if (!response.ok) throw new Error(await readError(response));
+      if (!response.ok) throw new Error((await readError(response)).error);
       const result = await response.json() as FinalGuideResult;
       setGuide(result);
       setPageIndex(0);
@@ -202,13 +231,39 @@ export default function Home() {
     else setQuestionIndex((current) => current - 1);
   }
 
+  function stopSpeaking() {
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    setSpeaking(false);
+  }
+
   function speak(text: string) {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "ko-KR";
     utterance.rate = 0.82;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    setSpeaking(true);
     window.speechSynthesis.speak(utterance);
+  }
+
+  function toggleSpeech(text: string) {
+    if (speaking) stopSpeaking();
+    else speak(text);
+  }
+
+  function changeAppointment(period: AppointmentPeriod, exactTime = "") {
+    if (!analysis) return;
+    const appointmentTime = exactTime || (period === "morning" ? "오전" : period === "afternoon" ? "오후" : "");
+    setAnalysis({
+      ...analysis,
+      document: { ...analysis.document, appointment_time: appointmentTime },
+      procedures: analysis.procedures.map((procedure) => ({
+        ...procedure,
+        appointment_period: period,
+      })),
+    });
   }
 
   function guidePageSpeechText(page: GuidePage): string {
@@ -236,8 +291,10 @@ export default function Home() {
     setAnswers({});
     setGuide(null);
     setError("");
+    setErrorKind(null);
     setStage("idle");
     setStep("upload");
+    stopSpeaking();
   }
 
   const processing = stage === "parsing" || stage === "analyzing" || stage === "generating";
@@ -256,7 +313,15 @@ export default function Home() {
           <button type="button" className={fontSize === "normal" ? "active" : ""} onClick={() => setFontSize("normal")}>보통</button>
           <button type="button" className={fontSize === "large" ? "active" : ""} onClick={() => setFontSize("large")}>크게</button>
           <button type="button" className={fontSize === "xlarge" ? "active" : ""} onClick={() => setFontSize("xlarge")}>더 크게</button>
-          <button type="button" className={highContrast ? "active contrast" : "contrast"} onClick={() => setHighContrast((value) => !value)} aria-pressed={highContrast}>고대비</button>
+          <button
+            type="button"
+            className={highContrast ? "active contrast" : "contrast"}
+            onClick={() => setHighContrast((value) => !value)}
+            aria-pressed={highContrast}
+            aria-label={highContrast ? "고대비 끄기" : "고대비 켜기"}
+          >
+            {highContrast ? "고대비 끄기" : "고대비 켜기"}
+          </button>
         </div>
       </header>
 
@@ -268,9 +333,11 @@ export default function Home() {
           <ReviewStep
             analysis={analysis}
             onChangeField={(field, value) => setAnalysis({ ...analysis, document: { ...analysis.document, [field]: value } })}
+            onChangeAppointment={changeAppointment}
             onConfirm={startQuestions}
             onBack={() => setStep("upload")}
-            onListen={() => speak(`${analysis.document.procedure_name} 안내문으로 확인했어요. 이 안내문이 맞나요?`)}
+            speaking={speaking}
+            onListen={() => toggleSpeech(`${analysis.document.procedure_name} 안내문으로 확인했어요. 이 안내문이 맞나요?`)}
           />
         )}
         {step === "questions" && currentQuestion && (
@@ -281,7 +348,8 @@ export default function Home() {
             selected={answers[currentQuestion.question_id]}
             onAnswer={answerQuestion}
             onBack={backQuestion}
-            onListen={() => speak(`${currentQuestion.question}. ${currentQuestion.helper_text}. ${currentQuestion.options.map((option) => option.label).join(", ")}`)}
+            speaking={speaking}
+            onListen={() => toggleSpeech(`${currentQuestion.question}. ${currentQuestion.helper_text}. ${currentQuestion.options.map((option) => option.label).join(", ")}`)}
           />
         )}
         {step === "guide" && guide && (
@@ -298,6 +366,8 @@ export default function Home() {
             onPrint={() => window.print()}
             documentPages={sourcePages}
             onSpeak={speak}
+            speaking={speaking}
+            onStopSpeaking={stopSpeaking}
           />
         )}
 
@@ -325,7 +395,25 @@ export default function Home() {
           </div>
         )}
 
-        {error && !processing && <div className="globalError" role="alert"><b>다시 확인해 주세요</b><p>{error}</p><button type="button" onClick={() => { setError(""); setStage("idle"); }}>확인</button></div>}
+        {error && !processing && (
+          <div className="globalError" role="alert">
+            <b>{errorKind === "UNSUPPORTED_DOCUMENT" ? "다른 안내문이 필요해요" : "다시 확인해 주세요"}</b>
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => {
+                if (errorKind === "UNSUPPORTED_DOCUMENT" || errorKind === "UNREADABLE_DOCUMENT") restart();
+                else {
+                  setError("");
+                  setErrorKind(null);
+                  setStage("idle");
+                }
+              }}
+            >
+              {errorKind ? "다른 안내문 선택" : "확인"}
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );

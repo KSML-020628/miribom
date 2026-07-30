@@ -241,8 +241,18 @@ function reply(
   answer: string,
   intent: ChatIntent = "unknown",
   suggestions = DEFAULT_SUGGESTIONS,
+  evidenceStatus: ChatReply["evidenceStatus"] = "NOT_FOUND",
 ): ChatReply {
-  return { kind, answer, intent, evidence: [], suggestions };
+  return {
+    kind,
+    answer,
+    intent,
+    evidence: [],
+    evidenceStatus,
+    sourceInstructionIds: [],
+    sourceDocumentIds: [],
+    suggestions,
+  };
 }
 
 export function classifyChatQuestion(question: string, history: ChatTurn[] = []): ClassifiedQuestion {
@@ -256,7 +266,7 @@ export function classifyChatQuestion(question: string, history: ChatTurn[] = [])
       searchTerms: [],
       immediateReply: reply(
         "off_topic",
-        "저는 병원에서 받은 검사 안내문만 설명할 수 있어요. 안내문에 대해 물어봐 주세요.",
+        "안내문에 해당 내용이 없어요.\n자세한 사항은 병원에 문의해 주세요.",
       ),
     };
   }
@@ -268,9 +278,10 @@ export function classifyChatQuestion(question: string, history: ChatTurn[] = [])
       searchTerms: [],
       immediateReply: reply(
         "symptom",
-        "저는 검사 안내문만 설명해요. 아프거나 몸이 이상하면 이 답변에 의존하지 말고 병원이나 의료진에게 바로 알려 주세요.",
+        "이 내용은 안내문만으로 판단하기 어려워요. 약을 임의로 바꾸지 말고 병원에 문의해 주세요.",
         "unknown",
         ["병원 전화번호를 알려줘", "검사 준비를 알려줘"],
+        "MEDICAL_CONFIRMATION_REQUIRED",
       ),
     };
   }
@@ -285,9 +296,10 @@ export function classifyChatQuestion(question: string, history: ChatTurn[] = [])
       searchTerms: [],
       immediateReply: reply(
         "ask_hospital",
-        "검사를 받아도 되는지나 약을 바꿔도 되는지는 제가 판단할 수 없어요. 혼자 결정하지 말고 병원이나 약을 처방한 의료진에게 확인해 주세요.",
+        "이 내용은 안내문만으로 판단하기 어려워요. 약을 임의로 바꾸지 말고 병원에 문의해 주세요.",
         firstIntent,
         ["병원 전화번호를 알려줘", "안내문에 적힌 약 설명을 알려줘"],
+        "MEDICAL_CONFIRMATION_REQUIRED",
       ),
     };
   }
@@ -299,7 +311,7 @@ export function classifyChatQuestion(question: string, history: ChatTurn[] = [])
       searchTerms: [],
       immediateReply: reply(
         "off_topic",
-        "저는 지금 올려주신 검사 안내문만 설명할 수 있어요. 물, 음식, 약, 검사 시간에 대해 물어봐 주세요.",
+        "안내문에 해당 내용이 없어요.\n자세한 사항은 병원에 문의해 주세요.",
       ),
     };
   }
@@ -334,7 +346,7 @@ export function classifyChatQuestion(question: string, history: ChatTurn[] = [])
       searchTerms: [],
       immediateReply: reply(
         "off_topic",
-        "이 질문은 검사 안내문과 관련된 내용을 찾기 어려워요. 물, 음식, 약, 검사 시간에 대해 물어봐 주세요.",
+        "안내문에 해당 내용이 없어요.\n자세한 사항은 병원에 문의해 주세요.",
       ),
     };
   }
@@ -379,25 +391,38 @@ function splitDocument(text: string): string[] {
 function guideChunks(guide: FinalGuideResult): SearchChunk[] {
   return guide.pages.map((page) => {
     const text = [page.procedure_id, page.section, page.when, page.title, ...page.body].filter(Boolean).join(" · ");
-    return { source: "맞춤 안내서", text, normalized: compact(text) };
+    return {
+      source: "맞춤 안내서",
+      text,
+      normalized: compact(text),
+      sourceInstructionIds: page.source_instruction_ids || [],
+      sourceDocumentIds: page.source_document_ids || [],
+    };
   });
 }
 
-function meaningfulTokens(text: string): string[] {
+function directQuestionTokens(text: string): string[] {
+  const ignored = new Set(["돼", "돼요", "되나요", "해도", "하나요", "뭐예요", "어떻게", "주세요"]);
   return text
     .normalize("NFKC")
     .toLowerCase()
     .split(/[^\p{L}\p{N}:]+/u)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2 || /^\d+$/.test(token));
+    .map((token) => token.trim().replace(/(은|는|이|가|을|를|에|에서|까지|부터|으로|로)$/u, ""))
+    .filter((token) => !ignored.has(token) && (token.length >= 1 || /^\d+$/.test(token)));
 }
 
 function scoreChunk(chunk: SearchChunk, classification: ClassifiedQuestion): number {
   let score = chunk.source === "맞춤 안내서" ? 1 : 0;
-  const questionTokens = meaningfulTokens(classification.normalizedQuestion);
+  const questionTokens = directQuestionTokens(classification.normalizedQuestion);
+  let directMatches = 0;
   for (const token of questionTokens) {
-    if (chunk.normalized.includes(compact(token))) score += Math.max(2, token.length);
+    if (chunk.normalized.includes(compact(token))) {
+      directMatches += 1;
+      score += Math.max(2, token.length);
+    }
   }
+  // 질문에 직접 나온 주제가 근거 문장에 하나도 없으면 일반적인 시간·검사 단어만으로 매칭하지 않습니다.
+  if (questionTokens.length && directMatches === 0) return 0;
   for (const term of classification.searchTerms.slice(1)) {
     if (chunk.normalized.includes(compact(term))) score += 2;
   }
@@ -429,6 +454,7 @@ export function retrieveChatEvidence(
       source: "병원 안내문" as const,
       text,
       pageNumber: page.pageNumber,
+      sourceDocumentIds: page.documentId ? [page.documentId] : [],
       normalized: compact(text),
     })),
   );
@@ -442,7 +468,13 @@ export function retrieveChatEvidence(
       source: chunk.source,
       text: chunk.text,
       pageNumber: chunk.pageNumber,
+      sourceInstructionIds: chunk.sourceInstructionIds || [],
+      sourceDocumentIds: chunk.sourceDocumentIds || [],
     }));
+}
+
+function uniqueIds(evidence: ChatEvidence[], key: "sourceInstructionIds" | "sourceDocumentIds"): string[] {
+  return [...new Set(evidence.flatMap((item) => item[key] || []))];
 }
 
 export function safeFallbackFromEvidence(
@@ -452,10 +484,13 @@ export function safeFallbackFromEvidence(
   if (!evidence.length) {
     return {
       kind: "ask_hospital",
-      answer: "이 안내문에서는 답을 찾지 못했어요. 병원에 전화해 확인해 주세요.",
+      answer: "안내문에 해당 내용이 없어요.\n자세한 사항은 병원에 문의해 주세요.",
       intent: classification.intent,
       understood_as: classification.understoodAs,
       evidence: [],
+      evidenceStatus: "NOT_FOUND",
+      sourceInstructionIds: [],
+      sourceDocumentIds: [],
       suggestions: DEFAULT_SUGGESTIONS,
     };
   }
@@ -472,6 +507,9 @@ export function safeFallbackFromEvidence(
     intent: classification.intent,
     understood_as: classification.understoodAs,
     evidence,
+    evidenceStatus: preferred.source === "맞춤 안내서" ? "FOUND_IN_APPLIED_GUIDE" : "FOUND_IN_DOCUMENT",
+    sourceInstructionIds: uniqueIds(evidence, "sourceInstructionIds"),
+    sourceDocumentIds: uniqueIds(evidence, "sourceDocumentIds"),
     suggestions: DEFAULT_SUGGESTIONS,
   };
 }

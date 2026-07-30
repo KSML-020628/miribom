@@ -25,8 +25,7 @@ export default function UploadStep({ files, busy, onAdd, onRemove, onMove, onAna
   return (
     <section className="stepScreen uploadStep" aria-labelledby="upload-heading">
       <div className="screenIntro">
-        <p className="eyebrow">첫 번째</p>
-        <h1 id="upload-heading">병원 안내문을<br />올려 주세요</h1>
+        <h1 id="upload-heading" data-screen-title tabIndex={-1}>병원 안내문을<br />올려 주세요</h1>
         <p>사진을 찍거나 PDF 파일을 선택해 주세요.</p>
       </div>
 
@@ -55,7 +54,7 @@ export default function UploadStep({ files, busy, onAdd, onRemove, onMove, onAna
                 <div className="fileThumb">
                   {item.preview ? <img src={item.preview} alt={`${index + 1}번째 안내문 미리보기`} /> : <span>PDF</span>}
                 </div>
-                <div className="fileInfo"><b>{index + 1}쪽</b><span>{item.file.name}</span></div>
+                <div className="fileInfo"><b>{index + 1}번째 파일</b><span>{item.file.name}</span></div>
                 <div className="fileControls">
                   <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} aria-label="앞쪽으로 이동">↑</button>
                   <button type="button" onClick={() => onMove(index, 1)} disabled={index === files.length - 1} aria-label="뒤쪽으로 이동">↓</button>
@@ -70,7 +69,10 @@ export default function UploadStep({ files, busy, onAdd, onRemove, onMove, onAna
       <button className="mainAction" type="button" disabled={!files.length || busy} onClick={onAnalyze}>
         {busy ? "안내문을 읽고 있어요…" : "안내문 분석하기"}
       </button>
-      <aside className="privacyBox"><b>개인정보를 확인해 주세요</b><p>이름과 주민번호는 가리고 올려 주세요. 올린 파일은 따로 저장하지 않아요.</p></aside>
+      <details className="privacyBox">
+        <summary>개인정보 안내</summary>
+        <p>이름과 주민번호는 가리고 올려 주세요. 올린 파일은 따로 저장하지 않아요.</p>
+      </details>
     </section>
   );
 }

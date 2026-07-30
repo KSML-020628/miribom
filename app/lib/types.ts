@@ -17,6 +17,18 @@ export type DocumentRole =
   | "UNKNOWN_ROLE";
 export type AppointmentPeriod = "morning" | "afternoon" | "unknown";
 export type QuestionScope = "per_patient" | "per_procedure" | "per_document";
+export type SupportedDocumentType =
+  | "PRE_EXAM_GUIDE"
+  | "PRE_PROCEDURE_GUIDE"
+  | "PRE_SURGERY_GUIDE"
+  | "ADMISSION_GUIDE"
+  | "DISCHARGE_GUIDE"
+  | "MEDICATION_PREPARATION_GUIDE";
+export type DocumentValidationStatus =
+  | "VALID"
+  | "UNSUPPORTED_DOCUMENT"
+  | "UNREADABLE_DOCUMENT"
+  | "LOW_CONFIDENCE";
 
 export const CONDITION_IDS = [
   "NO_CONDITION",
@@ -192,6 +204,8 @@ export interface ParsedPage {
   text: string;
   markdown: string;
   blocks: ParsedBlock[];
+  documentId?: string;
+  sourceFileName?: string;
 }
 
 export interface AppliedAnswer {
@@ -213,6 +227,7 @@ export interface GuidePage {
   personalization_note?: string;
   procedure_id?: ProcedureId;
   source_document_ids?: string[];
+  source_instruction_ids?: string[];
 }
 
 export interface HospitalConfirmation {
@@ -248,6 +263,7 @@ export interface ParseResponse {
 
 export interface ApiError {
   error: string;
+  validationStatus?: DocumentValidationStatus;
 }
 
 export type ChatIntent =
@@ -271,10 +287,18 @@ export type ChatReplyKind =
   | "symptom"
   | "off_topic";
 
+export type ChatEvidenceStatus =
+  | "FOUND_IN_APPLIED_GUIDE"
+  | "FOUND_IN_DOCUMENT"
+  | "NOT_FOUND"
+  | "MEDICAL_CONFIRMATION_REQUIRED";
+
 export interface ChatEvidence {
   source: "맞춤 안내서" | "병원 안내문";
   text: string;
   pageNumber?: number;
+  sourceInstructionIds?: string[];
+  sourceDocumentIds?: string[];
 }
 
 export interface ChatReply {
@@ -283,6 +307,9 @@ export interface ChatReply {
   intent: ChatIntent;
   understood_as?: string;
   evidence: ChatEvidence[];
+  evidenceStatus: ChatEvidenceStatus;
+  sourceInstructionIds: string[];
+  sourceDocumentIds: string[];
   suggestions: string[];
 }
 

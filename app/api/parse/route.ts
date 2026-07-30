@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { parseDocument } from "@/app/lib/upstage";
 import { extractDocument, fallbackExtract, mergeExtractions, verifyExtractionSources } from "@/app/lib/information-extract";
+import { validateUploadedDocument } from "@/app/lib/document-validation";
 import type { ParsedPage } from "@/app/lib/types";
 
 export const runtime = "nodejs";
@@ -33,6 +34,8 @@ export async function POST(request: Request) {
     const fileResults: Array<{
       pages: ParsedPage[];
       extraction: Awaited<ReturnType<typeof extractDocument>>;
+      documentId: string;
+      sourceFileName: string;
     }> = [];
     const failedFiles: string[] = [];
     for (const [fileIndex, file] of files.entries()) {
@@ -41,24 +44,53 @@ export async function POST(request: Request) {
         sourceFileName: file.name,
         sourceFileIndex: fileIndex,
       };
-      // 두 서비스는 서로 독립적이므로 동시에 실행해 전체 대기 시간을 줄입니다.
-      const [parseResult, extractResult] = await Promise.allSettled([
-        parseDocument(file),
-        extractDocument(file, "", context),
-      ]);
-      if (parseResult.status === "rejected") {
-        console.error(`Document Parse failed for ${file.name}:`, parseResult.reason);
+      let pages: ParsedPage[];
+      try {
+        pages = await parseDocument(file);
+      } catch (parseError) {
+        console.error(`Document Parse failed for ${file.name}:`, parseError);
         failedFiles.push(file.name);
         continue;
       }
-      const pages = parseResult.value;
-      const extraction = extractResult.status === "fulfilled"
-        ? verifyExtractionSources(extractResult.value, pages)
-        : fallbackExtract(pages, context);
-      if (extractResult.status === "rejected") {
-        console.error("Information Extract fallback:", extractResult.reason);
+
+      // 문서의 성격을 먼저 검사해 비의료 문서가 Solar/Information Extract로 넘어가지 않게 합니다.
+      const preflightValidation = validateUploadedDocument(pages);
+      if (preflightValidation.status === "UNSUPPORTED_DOCUMENT") {
+        return NextResponse.json(
+          {
+            error: "검사 준비 안내문이 아니에요.\n병원에서 받은 검사·시술·수술 전 안내문을 다시 올려 주세요.",
+            validationStatus: preflightValidation.status,
+          },
+          { status: 422 },
+        );
       }
-      fileResults.push({ pages, extraction });
+      if (preflightValidation.status === "UNREADABLE_DOCUMENT") {
+        return NextResponse.json(
+          {
+            error: "글자를 읽기 어려워요.\n종이 전체가 보이도록 밝은 곳에서 다시 찍어 주세요.",
+            validationStatus: preflightValidation.status,
+          },
+          { status: 422 },
+        );
+      }
+
+      let extraction: Awaited<ReturnType<typeof extractDocument>>;
+      try {
+        extraction = verifyExtractionSources(await extractDocument(file, "", context), pages);
+      } catch (extractError) {
+        console.error("Information Extract fallback:", extractError);
+        extraction = fallbackExtract(pages, context);
+      }
+      const validation = validateUploadedDocument(pages, extraction);
+      if (preflightValidation.status === "LOW_CONFIDENCE" || validation.status === "LOW_CONFIDENCE") {
+        extraction.warnings.push("검사 준비 안내문인지 확실하지 않아요. 확인 화면에서 문서 내용을 확인해 주세요.");
+      }
+      fileResults.push({
+        pages,
+        extraction,
+        documentId: context.documentId,
+        sourceFileName: context.sourceFileName,
+      });
     }
     if (!fileResults.length) throw new Error("올린 안내문을 모두 읽지 못했습니다.");
 
@@ -70,6 +102,8 @@ export async function POST(request: Request) {
         pages.push({
           ...page,
           pageNumber: currentOffset + index + 1,
+          documentId: result.documentId,
+          sourceFileName: result.sourceFileName,
         });
       });
       pageOffset += result.pages.length;

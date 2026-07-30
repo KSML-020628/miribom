@@ -19,24 +19,34 @@
   --black: #000000;
   --shadow: 0 18px 54px rgba(17, 24, 32, .12);
   --base-scale: 1;
+  --font-caption: .875rem;
+  --font-body: 1.125rem;
+  --font-body-large: 1.25rem;
+  --font-card-title: 1.5rem;
+  --font-time: 1.75rem;
+  --font-page-title: 2rem;
+  --font-question: 2rem;
 }
 
 [data-font-size="large"] { --base-scale: 1.13; }
 [data-font-size="xlarge"] { --base-scale: 1.28; }
 [data-contrast="high"] {
-  --blue: #004b8d;
-  --blue-dark: #002f59;
-  --blue-soft: #dcebfa;
-  --green: #07682d;
-  --green-soft: #dcf1e4;
-  --red: #a90000;
-  --red-soft: #ffe2e2;
-  --amber: #6a3d00;
-  --amber-soft: #ffedc7;
+  --blue: #003f88;
+  --blue-dark: #003f88;
+  --blue-soft: #ffffff;
+  --green: #005a32;
+  --green-soft: #e8fff2;
+  --red: #a40000;
+  --red-soft: #ffffff;
+  --amber: #7a3e00;
+  --amber-soft: #fff4d6;
   --ink: #000000;
   --muted: #222222;
-  --line: #65727c;
-  --canvas: #e5ebee;
+  --line: #000000;
+  --paper: #ffffff;
+  --canvas: #ffffff;
+  --focus: #ffbf00;
+  --shadow: 0 0 0 2px #000000;
 }
 
 * { box-sizing: border-box; }
@@ -57,6 +67,16 @@ button:focus-visible, input:focus-visible, [role="button"]:focus-visible {
 }
 button:disabled { opacity: .42; cursor: not-allowed; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+[data-screen-title]:focus { outline: 0; }
+[data-contrast="high"] button,
+[data-contrast="high"] input,
+[data-contrast="high"] .guidePage,
+[data-contrast="high"] .reviewSummary,
+[data-contrast="high"] .chatMessage { border-width: 4px; }
+[data-contrast="high"] button:focus-visible,
+[data-contrast="high"] input:focus-visible { outline-width: 7px; }
+[data-contrast="high"] .answerButton:not(.selected) { background: #ffffff; box-shadow: none; }
+[data-contrast="high"] .answerButton.selected { color: #ffffff; background: #003f88; box-shadow: inset 0 0 0 4px #000000; }
 
 /* 전체 앱 구조 */
 .appShell { min-height: 100dvh; display: grid; grid-template-rows: 76px auto minmax(0, 1fr); }
@@ -226,6 +246,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   cursor: pointer;
 }
 .privacyBox { padding: 18px 20px; background: var(--green-soft); border-left: 6px solid var(--green); border-radius: 10px; }
+.privacyBox summary { color: var(--green); font-weight: 900; cursor: pointer; }
 .privacyBox b { color: var(--green); font-size: 1rem; }
 .privacyBox p { margin: 7px 0 0; color: var(--ink); font-size: .9rem; line-height: 1.55; }
 
@@ -273,6 +294,30 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .reviewDocuments li { display: grid; gap: 2px; padding-top: 8px; border-top: 1px solid var(--line); }
 .reviewDocuments li span { color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
 .reviewStep > .mainAction { width: 100%; }
+.reviewSummary {
+  width: min(760px, 100%);
+  display: grid;
+  gap: 0;
+  margin: 0 auto 24px;
+  overflow: hidden;
+  background: var(--paper);
+  border: 3px solid var(--blue);
+  border-radius: 16px;
+}
+.reviewSummary p { display: grid; grid-template-columns: minmax(110px, .55fr) 1fr; align-items: center; gap: 20px; margin: 0; padding: 18px 24px; border-bottom: 2px solid var(--line); }
+.reviewSummary p:last-child { border-bottom: 0; }
+.reviewSummary span { color: var(--muted); font-size: var(--font-body); font-weight: 800; }
+.reviewSummary strong { color: var(--ink); font-size: var(--font-card-title); }
+.reviewEditPanel { width: min(760px, 100%); display: grid; gap: 14px; margin: 0 auto 24px; padding: 24px; background: var(--paper); border: 3px solid var(--line); border-radius: 16px; }
+.reviewEditPanel h2 { margin: 0 0 4px; font-size: var(--font-card-title); }
+.reviewEditPanel .reviewField { min-height: 92px; }
+.timeChoices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 16px; border: 3px solid var(--line); border-radius: 12px; }
+.timeChoices legend { padding: 0 8px; font-size: var(--font-body-large); font-weight: 900; }
+.timeChoices button { min-height: 64px; background: var(--paper); border: 3px solid var(--blue); border-radius: 10px; font-weight: 900; cursor: pointer; }
+.timeChoices button[aria-pressed="true"] { color: var(--white); background: var(--blue-dark); }
+.reviewActions { width: min(760px, 100%); display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 0 auto; }
+.reviewActions .mainAction { min-height: 72px; }
+.secondaryAction { min-height: 64px; color: var(--blue-dark); background: var(--paper); border: 3px solid var(--blue); border-radius: 12px; font-size: var(--font-body); font-weight: 900; cursor: pointer; }
 .warningBox { margin: 0 0 22px; padding: 18px; color: var(--ink); background: var(--amber-soft); border: 3px solid var(--amber); border-radius: 12px; }
 .warningBox b { color: var(--amber); }
 .warningBox p { margin: 8px 0 0; font-size: .95rem; }
@@ -292,7 +337,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .picturePlaceholder strong { font-size: 4.4rem; line-height: 1; }
 .picturePlaceholder span { font-size: 1rem; font-weight: 900; }
 .questionCopy { max-width: 760px; margin: 25px auto 24px; }
-.questionCopy h1 { margin: 0; font-size: clamp(2.1rem, 4.3vw, 3.25rem); line-height: 1.2; letter-spacing: -.055em; }
+.questionCopy h1 { margin: 0; font-size: clamp(1.75rem, 4vw, 2.4rem); line-height: 1.2; letter-spacing: -.045em; }
 .questionCopy p { margin: 13px 0 0; color: var(--muted); font-size: 1.3rem; line-height: 1.5; font-weight: 700; }
 .answerChoices { width: min(820px, 100%); display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 18px; margin-top: auto; }
 .answerButton {
@@ -338,7 +383,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .guidePageHeader { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--line); }
 .guidePageHeader div { display: grid; gap: 5px; }
 .guidePageHeader span { color: var(--blue-dark); font-size: 1rem; font-weight: 900; }
-.guidePageHeader b { font-size: 1.3rem; }
+.guidePageHeader b.instructionTime { color: var(--ink); font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.25; }
 .guidePageHeader small { color: var(--muted); font-size: 1rem; font-weight: 800; }
 .guidePageBody { flex: 1; display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: center; gap: 36px; }
 .guidePageBody .pictureCard { width: 230px; height: 230px; }
@@ -479,6 +524,23 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   font-weight: 900;
   cursor: pointer;
 }
+.chatEvidenceStatus {
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 12px;
+  color: var(--green);
+  background: var(--green-soft);
+  border: 2px solid var(--green);
+  border-radius: 9px;
+  font-size: .92rem;
+  font-weight: 900;
+}
+.chatEvidenceStatus.NOT_FOUND,
+.chatEvidenceStatus.MEDICAL_CONFIRMATION_REQUIRED { color: var(--amber); background: var(--amber-soft); border-color: var(--amber); }
+.chatEvidenceStatus.MEDICAL_CONFIRMATION_REQUIRED { color: var(--red); background: var(--red-soft); border-color: var(--red); }
 .chatEvidence { margin-top: 14px; border-top: 2px solid var(--line); }
 .chatEvidence summary {
   padding: 14px 0 4px;
@@ -583,7 +645,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .loadingBar i { width: 0; height: 100%; display: block; background: var(--blue); border-radius: inherit; transition: width .75s ease-out; }
 .globalError { width: min(560px, calc(100% - 40px)); position: fixed; z-index: 30; left: 50%; top: 50%; padding: 32px; transform: translate(-50%, -50%); text-align: center; background: var(--paper); border: 5px solid var(--red); border-radius: 18px; box-shadow: var(--shadow); }
 .globalError b { color: var(--red); font-size: 1.5rem; }
-.globalError p { font-size: 1.1rem; line-height: 1.5; }
+.globalError p { white-space: pre-line; font-size: 1.1rem; line-height: 1.5; }
 .globalError button { min-width: 140px; min-height: 54px; color: var(--white); background: var(--red); border: 0; border-radius: 10px; font-weight: 900; cursor: pointer; }
 
 @keyframes pulse { to { transform: scale(1.06); } }
@@ -629,6 +691,9 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .fileControls { grid-column: 1 / -1; }
   .reviewGrid { grid-template-columns: 1fr; }
   .reviewHero { align-items: flex-start; }
+  .reviewSummary p { grid-template-columns: 1fr; gap: 5px; }
+  .reviewActions { grid-template-columns: 1fr; }
+  .timeChoices { grid-template-columns: 1fr 1fr; }
   .questionScreen { padding: 20px 15px 28px; }
   .questionScreen .pictureCard.large { width: 180px; height: 180px; }
   .questionCopy h1 { font-size: 2rem; }
