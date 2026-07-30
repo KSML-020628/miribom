@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { buildFinalGuide } from "@/app/lib/guide-generator";
-import type { DocumentSummary, ExtractedInstruction, PersonalizationQuestion } from "@/app/lib/types";
+import type {
+  DocumentSummary,
+  ExtractedInstruction,
+  InstructionConflict,
+  PersonalizationQuestion,
+  ProcedureGroup,
+} from "@/app/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 75;
@@ -12,6 +18,8 @@ export async function POST(request: Request) {
       questions?: unknown;
       instructions?: unknown;
       answers?: unknown;
+      procedures?: unknown;
+      conflicts?: unknown;
     };
     if (
       !body.document || typeof body.document !== "object" ||
@@ -26,6 +34,8 @@ export async function POST(request: Request) {
       body.questions as PersonalizationQuestion[],
       body.instructions as ExtractedInstruction[],
       body.answers as Record<string, string>,
+      Array.isArray(body.procedures) ? body.procedures as ProcedureGroup[] : [],
+      Array.isArray(body.conflicts) ? body.conflicts as InstructionConflict[] : [],
     );
     return NextResponse.json(guide);
   } catch (error) {

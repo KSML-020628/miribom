@@ -264,6 +264,14 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .reviewField span { color: var(--muted); font-size: .88rem; font-weight: 800; }
 .reviewField strong, .reviewField input { color: var(--ink); font-size: 1.25rem; font-weight: 900; }
 .reviewField input { width: 100%; padding: 8px; background: var(--blue-soft); border: 2px solid var(--blue); border-radius: 7px; }
+.reviewHero p { margin: 6px 0 0; color: var(--ink); font-size: 1rem; font-weight: 750; }
+.reviewDocuments { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 0 0 20px; }
+.reviewDocuments section { padding: 18px; background: var(--blue-soft); border: 2px solid var(--blue); border-radius: 12px; }
+.reviewDocuments h2 { margin: 0 0 8px; font-size: 1.25rem; }
+.reviewDocuments p { margin: 4px 0; color: var(--ink); font-size: .95rem; font-weight: 750; }
+.reviewDocuments ul { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.reviewDocuments li { display: grid; gap: 2px; padding-top: 8px; border-top: 1px solid var(--line); }
+.reviewDocuments li span { color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
 .reviewStep > .mainAction { width: 100%; }
 .warningBox { margin: 0 0 22px; padding: 18px; color: var(--ink); background: var(--amber-soft); border: 3px solid var(--amber); border-radius: 12px; }
 .warningBox b { color: var(--amber); }

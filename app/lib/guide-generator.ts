@@ -1,11 +1,13 @@
-import { ACTION_IMAGE_TAGS, ACTION_SORT_ORDER, QUESTION_CATALOG } from "./condition-catalog";
+import { ACTION_IMAGE_TAGS, ACTION_SORT_ORDER } from "./condition-catalog";
 import { simplifySelectedInstructions } from "./upstage";
 import type {
   DocumentSummary,
   ExtractedInstruction,
   FinalGuideResult,
   GuidePage,
+  InstructionConflict,
   PersonalizationQuestion,
+  ProcedureGroup,
 } from "./types";
 
 const STAGE_ORDER: Record<string, number> = {
@@ -18,14 +20,36 @@ const STAGE_ORDER: Record<string, number> = {
 };
 
 function questionForCondition(instruction: ExtractedInstruction, questions: PersonalizationQuestion[]): PersonalizationQuestion | undefined {
-  const template = QUESTION_CATALOG[instruction.condition_id];
-  return template ? questions.find((question) => question.question_id === template.question_id) : undefined;
+  return questions.find((question) => question.linked_instruction_ids.includes(instruction.instruction_id))
+    || questions.find((question) => (
+      question.condition_id === instruction.condition_id
+      && (
+        question.scope === "per_patient"
+        || question.scope_target_id === instruction.procedure_id
+        || question.scope_target_id === instruction.document_id
+      )
+    ));
 }
 
-function answerApplies(instruction: ExtractedInstruction, answer: string | undefined): "include" | "exclude" | "confirm" {
+function answerApplies(
+  instruction: ExtractedInstruction,
+  answer: string | undefined,
+  procedures: ProcedureGroup[],
+): "include" | "exclude" | "confirm" {
   if (!instruction.source_verified) return "exclude";
+  if (instruction.superseded_by) return "exclude";
   if (instruction.applicability === "all" || instruction.condition_id === "NO_CONDITION") return "include";
+  if (instruction.condition_id === "APPOINTMENT_PERIOD" && !answer) {
+    const resolved = procedures.find((procedure) => procedure.procedure_id === instruction.procedure_id)?.appointment_period;
+    if (resolved && resolved !== "unknown") {
+      return !instruction.condition_value || instruction.condition_value === resolved ? "include" : "exclude";
+    }
+  }
   if (!answer || answer === "unknown") return "confirm";
+  if (instruction.condition_id === "BLOOD_THINNER_USE") {
+    if (answer === "no") return "exclude";
+    return "confirm";
+  }
   if (instruction.condition_id === "BLOOD_THINNER_COUNT") {
     if (answer === "none") return "exclude";
     const expected = instruction.condition_value;
@@ -44,11 +68,15 @@ function whenLabel(instruction: ExtractedInstruction): string {
 function fixedTemplate(instruction: ExtractedInstruction): { title: string; body: string[] } | null {
   switch (instruction.action_id) {
     case "NO_FOOD":
-      return { title: "음식을 먹지 마세요", body: [] };
+      return instruction.object.length > 18
+        ? { title: "이 음식은 먹지 마세요", body: [instruction.object] }
+        : { title: "음식을 먹지 마세요", body: [] };
     case "NO_WATER":
       return { title: "물을 마시지 마세요", body: [] };
     case "EAT_PORRIDGE":
-      return { title: "죽을 드세요", body: ["반찬 없이 흰죽만 드세요."] };
+      return instruction.object.length > 18
+        ? { title: "이 음식은 드셔도 돼요", body: [instruction.object] }
+        : { title: "죽을 드세요", body: ["반찬 없이 흰죽만 드세요."] };
     case "NO_DRIVING":
       return { title: "직접 운전하지 마세요", body: ["검사한 날에는 직접 운전하지 마세요."] };
     case "COME_WITH_GUARDIAN":
@@ -68,9 +96,36 @@ function fixedTemplate(instruction: ExtractedInstruction): { title: string; body
       if (instruction.condition_id === "BLOOD_THINNER_COUNT") {
         return { title: "약을 혼자 끊지 마세요", body: ["약 이름을 병원에 알려 주세요."] };
       }
+      if (instruction.condition_id === "BLOOD_THINNER_USE") {
+        return { title: "먹는 약을 병원에 알려 주세요", body: ["혼자 약을 끊지 마세요."] };
+      }
       return { title: "먹는 약을 확인하세요", body: ["언제 먹는지는 병원에 물어보세요."] };
-    case "TAKE_BOWEL_PREP":
-      return { title: "장을 비우는 약을 드세요", body: ["안내문에 적힌 양만 드세요."] };
+    case "TAKE_BOWEL_PREP": {
+      const isWater = /물|생수/.test(instruction.object)
+        && /mL|ml|cc|L|ℓ|리터|컵/.test(instruction.amount);
+      const normalizedObject = instruction.object.normalize("NFKC").replace(/\s+/g, "");
+      const normalizedAmount = instruction.amount.normalize("NFKC").replace(/\s+/g, "");
+      const amount = normalizedAmount && normalizedObject.includes(normalizedAmount)
+        ? ""
+        : instruction.amount;
+      const subject = isWater
+        ? `물${amount ? ` ${amount}` : ""}`
+        : [instruction.object || "장을 비우는 약", amount].filter(Boolean).join(" ");
+      const easyMethod = instruction.method
+        .replace(/복용(?:합니다|하세요)?/g, "드세요")
+        .replace(/마십니다/g, "마시세요");
+      const methodRepeatsDuration = Boolean(instruction.duration)
+        && /^(?:천천히\s*)?(?:마시세요|드세요)\.?$/.test(easyMethod.trim());
+      return {
+        title: isWater ? `${subject} 마시세요` : `${subject} 드세요`,
+        body: [
+          methodRepeatsDuration ? "" : easyMethod,
+          instruction.duration
+            ? `${instruction.duration} 동안 천천히 ${isWater ? "마시세요" : "드세요"}.`
+            : "",
+        ].filter(Boolean),
+      };
+    }
     default:
       return null;
   }
@@ -95,6 +150,8 @@ function personalizationNote(instruction: ExtractedInstruction): string {
       return "혈압약을 드신다고 답했어요.";
     case "BLOOD_THINNER_COUNT":
       return "먹는 약의 개수를 반영했어요.";
+    case "BLOOD_THINNER_USE":
+      return "피가 잘 멎지 않게 하는 약 답변을 반영했어요.";
     case "GASTRECTOMY_HISTORY":
       return "위 수술 경험을 반영했어요.";
     case "SEDATION":
@@ -117,18 +174,35 @@ export async function buildFinalGuide(
   questions: PersonalizationQuestion[],
   instructions: ExtractedInstruction[],
   answers: Record<string, string>,
+  procedures: ProcedureGroup[] = [],
+  conflicts: InstructionConflict[] = [],
 ): Promise<FinalGuideResult> {
   const selected: ExtractedInstruction[] = [];
   const confirmations: ExtractedInstruction[] = [];
   for (const instruction of instructions) {
+    if (
+      instruction.action_id === "CHECK_TIME"
+      && procedures.some((procedure) => (
+        procedure.procedure_id === instruction.procedure_id
+        && procedure.appointment_period !== "unknown"
+      ))
+    ) continue;
     const question = questionForCondition(instruction, questions);
-    const decision = answerApplies(instruction, question ? answers[question.question_id] : undefined);
+    const decision = answerApplies(instruction, question ? answers[question.question_id] : undefined, procedures);
     if (decision === "include") selected.push(instruction);
     if (decision === "confirm") confirmations.push(instruction);
   }
 
+  const timeOrder = (instruction: ExtractedInstruction) => {
+    const match = instruction.when_time.match(/(오전|오후|아침|저녁|밤)?\s*(\d{1,2})(?::|\s*시\s*)?(\d{1,2})?/);
+    if (!match) return 9999;
+    let hour = Number(match[2]);
+    if ((match[1] === "오후" || match[1] === "저녁" || match[1] === "밤") && hour < 12) hour += 12;
+    return hour * 60 + Number(match[3] || 0);
+  };
   const ordered = selected.sort((left, right) =>
     (STAGE_ORDER[left.when_stage] ?? 99) - (STAGE_ORDER[right.when_stage] ?? 99) ||
+    timeOrder(left) - timeOrder(right) ||
     ACTION_SORT_ORDER[left.action_id] - ACTION_SORT_ORDER[right.action_id],
   );
   const needsSolar = ordered.filter((instruction) => !fixedTemplate(instruction));
@@ -150,7 +224,9 @@ export async function buildFinalGuide(
       document.hospital_name ? `${document.hospital_name} 안내문을 바탕으로 만들었어요.` : "병원 안내문을 바탕으로 만들었어요.",
       [document.procedure_date, document.appointment_time].filter(Boolean).join(" "),
     ].filter(Boolean),
-    image_tag: document.procedure_name.includes("대장") ? "COLONOSCOPY" : "GASTROSCOPY",
+    image_tag: document.procedure_name.includes("대장") && !document.procedure_name.includes("위·")
+      ? "COLONOSCOPY"
+      : document.procedure_name.includes("위") ? "GASTROSCOPY" : "IMAGE_NOT_FOUND",
     importance: "information",
     personalized: false,
   };
@@ -158,6 +234,9 @@ export async function buildFinalGuide(
   const pages = ordered.map((instruction, index): GuidePage => {
     const template = fixedTemplate(instruction);
     const question = questionForCondition(instruction, questions);
+    const resolvedAppointment = instruction.condition_id === "APPOINTMENT_PERIOD"
+      ? procedures.find((procedure) => procedure.procedure_id === instruction.procedure_id)?.appointment_period
+      : undefined;
     const easy = solarText[instruction.instruction_id];
     const title = template?.title || easy || "안내문을 확인해 주세요";
     const body = compactBody(
@@ -173,8 +252,20 @@ export async function buildFinalGuide(
       image_tag: ACTION_IMAGE_TAGS[instruction.action_id],
       importance: instruction.importance,
       personalized: instruction.applicability !== "all",
-      personalized_by: question ? [question.question_id] : [],
-      personalization_note: question ? personalizationNote(instruction) : "",
+      personalized_by: question
+        ? [question.question_id]
+        : resolvedAppointment && resolvedAppointment !== "unknown"
+          ? [`appointment_period:${instruction.procedure_id}`]
+          : [],
+      personalization_note: question
+        ? personalizationNote(instruction)
+        : resolvedAppointment === "afternoon"
+          ? "오후 검사 시간을 반영했어요."
+          : resolvedAppointment === "morning"
+            ? "오전 검사 시간을 반영했어요."
+            : "",
+      procedure_id: instruction.procedure_id,
+      source_document_ids: instruction.source_document_ids,
     };
   });
 
@@ -200,12 +291,19 @@ export async function buildFinalGuide(
       answer: item.value,
       effect_on_instructions: "원문에서 이 답에 해당하는 안내만 선택했어요.",
     })),
-    pages: [cover, ...pages].slice(0, 18),
-    hospital_confirmation: confirmations.map((instruction) => ({
-      title: "병원에 확인해 주세요",
-      body: instruction.source_text,
-      image_tag: "ASK_DOCTOR",
-    })),
+    pages: [cover, ...pages].slice(0, 30),
+    hospital_confirmation: [
+      ...confirmations.map((instruction) => ({
+        title: "병원에 확인해 주세요",
+        body: instruction.source_text,
+        image_tag: "ASK_DOCTOR",
+      })),
+      ...conflicts.map((conflict) => ({
+        title: "안내문 내용이 서로 달라요",
+        body: conflict.summary,
+        image_tag: "ASK_DOCTOR",
+      })),
+    ],
     warnings: instructions.some((instruction) => !instruction.source_verified)
       ? ["원문 근거를 확인하지 못한 항목은 안내서에서 제외했어요."]
       : [],

@@ -378,7 +378,7 @@ function splitDocument(text: string): string[] {
 
 function guideChunks(guide: FinalGuideResult): SearchChunk[] {
   return guide.pages.map((page) => {
-    const text = [page.section, page.when, page.title, ...page.body].filter(Boolean).join(" · ");
+    const text = [page.procedure_id, page.section, page.when, page.title, ...page.body].filter(Boolean).join(" · ");
     return { source: "맞춤 안내서", text, normalized: compact(text) };
   });
 }
@@ -438,7 +438,11 @@ export function retrieveChatEvidence(
     .filter((item) => item.score >= 3 && containsRequiredFact(item.chunk, classification))
     .sort((a, b) => b.score - a.score || (a.chunk.source === "맞춤 안내서" ? -1 : 1))
     .slice(0, 3)
-    .map(({ chunk }) => ({ source: chunk.source, text: chunk.text }));
+    .map(({ chunk }) => ({
+      source: chunk.source,
+      text: chunk.text,
+      pageNumber: chunk.pageNumber,
+    }));
 }
 
 export function safeFallbackFromEvidence(

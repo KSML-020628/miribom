@@ -157,6 +157,8 @@ export default function Home() {
           questions: analysis.personalization_questions,
           instructions: analysis.instructions,
           answers: nextAnswers,
+          procedures: analysis.procedures,
+          conflicts: analysis.conflicts,
         }),
       });
       if (!response.ok) throw new Error(await readError(response));

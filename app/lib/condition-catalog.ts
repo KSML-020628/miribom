@@ -1,6 +1,9 @@
 import type { ActionId, ConditionId, PersonalizationQuestion } from "./types";
 
-interface QuestionTemplate extends Omit<PersonalizationQuestion, "source_text" | "reason_for_question"> {
+interface QuestionTemplate extends Omit<
+  PersonalizationQuestion,
+  "condition_id" | "scope_target_id" | "linked_instruction_ids" | "source_text" | "reason_for_question"
+> {
   allowedActions: ActionId[];
   reason: string;
 }
@@ -17,8 +20,26 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
+    scope: "per_patient",
+    option_type: "yes_no_unknown",
     allowedActions: ["EAT_PORRIDGE", "NO_FOOD", "NO_WATER", "OTHER_ACTION"],
     reason: "위 수술 경험에 따라 식사와 준비 방법이 달라집니다.",
+  },
+  BLOOD_THINNER_USE: {
+    question_id: "blood_thinner_use",
+    question: "피가 잘 멎지 않게 하는 약을 드세요?",
+    helper_text: "아스피린이나 와파린 같은 약이에요.",
+    image_tag: "TAKE_MEDICINE",
+    options: [
+      { value: "yes", label: "네", symbol: "○" },
+      { value: "no", label: "아니요", symbol: "×" },
+      { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
+    ],
+    required: true,
+    scope: "per_patient",
+    option_type: "yes_no_unknown",
+    allowedActions: ["ASK_PRESCRIBER", "TAKE_MEDICINE", "OTHER_ACTION"],
+    reason: "출혈과 관련된 약은 병원에 확인해야 합니다.",
   },
   BLOOD_THINNER_COUNT: {
     question_id: "blood_thinner_count",
@@ -32,6 +53,8 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
+    scope: "per_patient",
+    option_type: "count_unknown",
     allowedActions: ["ASK_PRESCRIBER", "TAKE_MEDICINE", "OTHER_ACTION"],
     reason: "약의 종류와 개수에 따라 병원 확인 안내가 달라집니다.",
   },
@@ -46,6 +69,8 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
+    scope: "per_patient",
+    option_type: "yes_no_unknown",
     allowedActions: ["TAKE_MEDICINE", "ASK_PRESCRIBER"],
     reason: "검사하는 날 약 안내가 달라질 수 있습니다.",
   },
@@ -60,6 +85,8 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
+    scope: "per_patient",
+    option_type: "yes_no_unknown",
     allowedActions: ["TAKE_MEDICINE", "ASK_PRESCRIBER"],
     reason: "검사 전 음식과 약 준비가 달라질 수 있습니다.",
   },
@@ -74,6 +101,8 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
+    scope: "per_procedure",
+    option_type: "yes_no_unknown",
     allowedActions: ["NO_DRIVING", "COME_WITH_GUARDIAN", "OTHER_ACTION"],
     reason: "보호자와 이동 준비가 달라질 수 있습니다.",
   },
@@ -88,6 +117,8 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
+    scope: "per_patient",
+    option_type: "yes_no_unknown",
     allowedActions: ["COME_WITH_GUARDIAN"],
     reason: "보호자 동행 가능 여부를 병원에 확인해야 할 수 있습니다.",
   },
@@ -102,6 +133,8 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
+    scope: "per_procedure",
+    option_type: "period_unknown",
     allowedActions: ["TAKE_BOWEL_PREP", "NO_FOOD", "NO_WATER", "CHECK_TIME"],
     reason: "예약 시간에 따라 준비 시간이 달라집니다.",
   },
@@ -116,7 +149,9 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
-    allowedActions: ["TAKE_BOWEL_PREP", "ASK_PRESCRIBER"],
+    scope: "per_procedure",
+    option_type: "yes_no_unknown",
+    allowedActions: ["TAKE_BOWEL_PREP", "ASK_PRESCRIBER", "OTHER_ACTION"],
     reason: "약 준비 여부에 따라 지금 확인할 일이 달라집니다.",
   },
   DENTAL_RISK: {
@@ -130,6 +165,8 @@ export const QUESTION_CATALOG: Partial<Record<ConditionId, QuestionTemplate>> = 
       { value: "unknown", label: "잘 모르겠어요", symbol: "?" },
     ],
     required: true,
+    scope: "per_patient",
+    option_type: "yes_no_unknown",
     allowedActions: ["CHECK_TEETH", "ASK_PRESCRIBER"],
     reason: "검사 전 치과 확인이 필요할 수 있습니다.",
   },

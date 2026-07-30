@@ -1,6 +1,7 @@
 "use client";
 
 import type { AnalysisResult, DocumentSummary } from "@/app/lib/types";
+import { roleLabel } from "@/app/lib/document-merge";
 
 interface Props {
   analysis: AnalysisResult;
@@ -26,7 +27,32 @@ export default function ReviewStep({ analysis, onChangeField, onConfirm, onBack,
       </div>
       <div className="reviewHero" role="status">
         <span className="reviewCheck" aria-hidden="true">✓</span>
-        <div><small>확인한 검사</small><strong>{document.procedure_name}</strong></div>
+        <div>
+          <small>확인한 검사</small>
+          <strong>{document.procedure_name}</strong>
+          <p>안내문 {analysis.documents.length}개를 확인했어요.</p>
+        </div>
+      </div>
+      <div className="reviewDocuments" aria-label="확인된 안내문">
+        {analysis.procedures.map((procedure) => (
+          <section key={procedure.group_id}>
+            <h2>{procedure.procedure_name}</h2>
+            {procedure.appointment_period !== "unknown" && (
+              <p>검사 시간: {procedure.appointment_period === "morning" ? "오전" : "오후"}</p>
+            )}
+            {procedure.regimen_name && <p>장 청소약: {procedure.regimen_name}</p>}
+            <ul>
+              {analysis.documents
+                .filter((item) => procedure.document_ids.includes(item.document_id))
+                .map((item) => (
+                  <li key={item.document_id}>
+                    <b>{roleLabel(item.document_role)}</b>
+                    <span>{item.source_file_name}</span>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ))}
       </div>
       <div className="reviewGrid">
         <label className="reviewField">

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:merge": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/document-merge.test.mjs"
   },
   "dependencies": {
     "next": "^16.0.0",

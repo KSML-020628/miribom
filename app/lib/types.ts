@@ -2,10 +2,26 @@ export type SourceReliability = "clear" | "partially_unclear" | "unclear";
 export type AnswerValue = string;
 export type Importance = "required" | "caution" | "ask_hospital" | "information";
 export type Applicability = "all" | "conditional" | "confirm_with_hospital";
+export type ProcedureId =
+  | "GASTROSCOPY"
+  | "COLONOSCOPY"
+  | "BLOOD_TEST"
+  | "OTHER_PROCEDURE"
+  | "UNKNOWN_PROCEDURE";
+export type DocumentRole =
+  | "GENERAL_PREPARATION"
+  | "BOWEL_PREP_REGIMEN"
+  | "MEDICATION_GUIDE"
+  | "SCHEDULE_GUIDE"
+  | "OTHER_GUIDE"
+  | "UNKNOWN_ROLE";
+export type AppointmentPeriod = "morning" | "afternoon" | "unknown";
+export type QuestionScope = "per_patient" | "per_procedure" | "per_document";
 
 export const CONDITION_IDS = [
   "NO_CONDITION",
   "GASTRECTOMY_HISTORY",
+  "BLOOD_THINNER_USE",
   "BLOOD_THINNER_COUNT",
   "BLOOD_PRESSURE_MEDICINE",
   "DIABETES_MEDICINE",
@@ -38,13 +54,53 @@ export type ActionId = (typeof ACTION_IDS)[number];
 
 export interface DocumentSummary {
   document_type: string;
+  procedure_id?: ProcedureId;
   procedure_name: string;
   hospital_name: string;
   procedure_date: string;
   appointment_time: string;
   hospital_phone: string;
   page_count: number;
+  document_count?: number;
   source_reliability: SourceReliability;
+}
+
+export interface ExtractedDocument {
+  document_id: string;
+  source_file_name: string;
+  source_file_index: number;
+  document_type: string;
+  procedure_id: ProcedureId;
+  procedure_name: string;
+  document_role: DocumentRole;
+  hospital_name: string;
+  procedure_date: string;
+  appointment_time: string;
+  appointment_period: AppointmentPeriod;
+  hospital_phone: string;
+  regimen_name: string;
+  page_count: number | null;
+  source_reliability: SourceReliability;
+}
+
+export interface ProcedureGroup {
+  group_id: string;
+  procedure_id: ProcedureId;
+  procedure_name: string;
+  document_ids: string[];
+  document_roles: DocumentRole[];
+  appointment_period: AppointmentPeriod;
+  regimen_name: string;
+}
+
+export interface InstructionConflict {
+  conflict_id: string;
+  procedure_id: ProcedureId;
+  topic: string;
+  instruction_ids: string[];
+  document_ids: string[];
+  summary: string;
+  resolution: "confirm_with_hospital";
 }
 
 export interface QuestionOption {
@@ -55,6 +111,11 @@ export interface QuestionOption {
 
 export interface PersonalizationQuestion {
   question_id: string;
+  condition_id: ConditionId;
+  scope: QuestionScope;
+  scope_target_id: string;
+  option_type: string;
+  linked_instruction_ids: string[];
   question: string;
   helper_text: string;
   image_tag: string;
@@ -67,6 +128,9 @@ export interface PersonalizationQuestion {
 export interface AnalysisResult {
   mode: "questionnaire";
   document: DocumentSummary;
+  documents: ExtractedDocument[];
+  procedures: ProcedureGroup[];
+  conflicts: InstructionConflict[];
   preparation_items: string[];
   personalization_questions: PersonalizationQuestion[];
   instructions: ExtractedInstruction[];
@@ -76,8 +140,14 @@ export interface AnalysisResult {
 
 export interface ExtractedInstruction {
   instruction_id: string;
+  document_id: string;
+  procedure_id: ProcedureId;
+  document_role: DocumentRole;
+  source_file_name: string;
   source_page: number;
   source_text: string;
+  source_document_ids: string[];
+  superseded_by?: string;
   applicability: Applicability;
   condition_id: ConditionId;
   condition_value: string;
@@ -85,6 +155,9 @@ export interface ExtractedInstruction {
   when_stage: string;
   when_time: string;
   object: string;
+  method: string;
+  amount: string;
+  duration: string;
   importance: Importance;
   requires_user_question: boolean;
   source_verified: boolean;
@@ -93,7 +166,10 @@ export interface ExtractedInstruction {
 
 export interface ExtractionPayload {
   document: Omit<DocumentSummary, "page_count" | "source_reliability">;
+  documents: ExtractedDocument[];
+  procedures: ProcedureGroup[];
   instructions: ExtractedInstruction[];
+  conflicts: InstructionConflict[];
   mode: "information-extract" | "mixed" | "fallback";
   warnings: string[];
 }
@@ -135,6 +211,8 @@ export interface GuidePage {
   personalized: boolean;
   personalized_by?: string[];
   personalization_note?: string;
+  procedure_id?: ProcedureId;
+  source_document_ids?: string[];
 }
 
 export interface HospitalConfirmation {

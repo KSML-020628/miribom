@@ -34,22 +34,33 @@ export async function POST(request: Request) {
       pages: ParsedPage[];
       extraction: Awaited<ReturnType<typeof extractDocument>>;
     }> = [];
-    for (const file of files) {
+    const failedFiles: string[] = [];
+    for (const [fileIndex, file] of files.entries()) {
+      const context = {
+        documentId: `DOC-${String(fileIndex + 1).padStart(3, "0")}`,
+        sourceFileName: file.name,
+        sourceFileIndex: fileIndex,
+      };
       // 두 서비스는 서로 독립적이므로 동시에 실행해 전체 대기 시간을 줄입니다.
       const [parseResult, extractResult] = await Promise.allSettled([
         parseDocument(file),
-        extractDocument(file, ""),
+        extractDocument(file, "", context),
       ]);
-      if (parseResult.status === "rejected") throw parseResult.reason;
+      if (parseResult.status === "rejected") {
+        console.error(`Document Parse failed for ${file.name}:`, parseResult.reason);
+        failedFiles.push(file.name);
+        continue;
+      }
       const pages = parseResult.value;
       const extraction = extractResult.status === "fulfilled"
         ? verifyExtractionSources(extractResult.value, pages)
-        : fallbackExtract(pages);
+        : fallbackExtract(pages, context);
       if (extractResult.status === "rejected") {
         console.error("Information Extract fallback:", extractResult.reason);
       }
       fileResults.push({ pages, extraction });
     }
+    if (!fileResults.length) throw new Error("올린 안내문을 모두 읽지 못했습니다.");
 
     let pageOffset = 0;
     const pages: ParsedPage[] = [];
@@ -69,6 +80,9 @@ export async function POST(request: Request) {
       };
     });
     const extraction = mergeExtractions(extractionParts);
+    if (failedFiles.length) {
+      extraction.warnings.push(`${failedFiles.join(", ")} 파일은 읽지 못해 결과에서 제외했어요.`);
+    }
     return NextResponse.json({
       documentId: `DOC-${randomUUID()}`,
       pages,

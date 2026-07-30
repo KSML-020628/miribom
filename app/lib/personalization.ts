@@ -12,13 +12,38 @@ export function buildAnalysisFromExtraction(extraction: ExtractionPayload, pageC
       rejectedConditionCount += 1;
       continue;
     }
-    const existing = questionMap.get(template.question_id);
+    const procedure = extraction.procedures.find((item) => item.procedure_id === instruction.procedure_id);
+    if (
+      instruction.condition_id === "APPOINTMENT_PERIOD"
+      && procedure
+      && procedure.appointment_period !== "unknown"
+    ) continue;
+    const scopeTargetId = template.scope === "per_patient"
+      ? "PATIENT"
+      : template.scope === "per_procedure"
+        ? instruction.procedure_id
+        : instruction.document_id;
+    const dedupKey = `${instruction.condition_id}:${template.scope}:${scopeTargetId}:${template.option_type}`;
+    const existing = questionMap.get(dedupKey);
     const sourceText = existing?.source_text
       ? `${existing.source_text} / ${instruction.source_text}`.slice(0, 700)
       : instruction.source_text;
-    questionMap.set(template.question_id, {
-      question_id: template.question_id,
-      question: template.question,
+    const regimenName = procedure?.regimen_name;
+    const questionId = template.scope === "per_patient"
+      ? template.question_id
+      : `${template.question_id}:${scopeTargetId}`;
+    questionMap.set(dedupKey, {
+      question_id: questionId,
+      condition_id: instruction.condition_id,
+      scope: template.scope,
+      scope_target_id: scopeTargetId,
+      option_type: template.option_type,
+      linked_instruction_ids: [
+        ...new Set([...(existing?.linked_instruction_ids || []), instruction.instruction_id]),
+      ],
+      question: instruction.condition_id === "BOWEL_PREP_READY" && regimenName
+        ? `${regimenName.replace(/정$/, "")} 약을 준비했어요?`
+        : template.question,
       helper_text: template.helper_text,
       image_tag: template.image_tag,
       options: template.options,
@@ -42,11 +67,14 @@ export function buildAnalysisFromExtraction(extraction: ExtractionPayload, pageC
       page_count: pageCount,
       source_reliability: extraction.mode === "information-extract" && !unverifiedCount ? "clear" : "partially_unclear",
     },
+    documents: extraction.documents,
+    procedures: extraction.procedures,
+    conflicts: extraction.conflicts,
     preparation_items: extraction.instructions
       .filter((instruction) => instruction.source_verified)
       .map((instruction) => instruction.source_text)
       .slice(0, 12),
-    personalization_questions: Array.from(questionMap.values()).slice(0, 8),
+    personalization_questions: Array.from(questionMap.values()).slice(0, 12),
     instructions: extraction.instructions,
     extraction_mode: extraction.mode,
     warnings,
