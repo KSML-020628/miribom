@@ -15,9 +15,9 @@ assert.match(chatSource, /안내문에 해당 내용이 없어요\.\\n자세한 
 assert.match(chatSource, /directMatches === 0/);
 
 const pageSource = read("app/page.tsx");
-assert.match(pageSource, /miribom-high-contrast/);
-assert.match(pageSource, /aria-pressed=\{highContrast\}/);
-assert.match(pageSource, /고대비 끄기/);
+assert.doesNotMatch(pageSource, /miribom-high-contrast/);
+assert.doesNotMatch(pageSource, /highContrast/);
+assert.doesNotMatch(pageSource, /고대비/);
 
 const reviewSource = read("app/ui/ReviewStep.tsx");
 assert.match(reviewSource, /type="date"/);
@@ -35,7 +35,6 @@ assert.match(guideSource, /PersonalizePanel/);
 
 const css = read("app/globals.css");
 assert.match(css, /--font-time:/);
-assert.match(css, /\[data-contrast="high"\]/);
-assert.match(css, /--line: #000000/);
+assert.doesNotMatch(css, /\[data-contrast="high"\]/);
 
-console.log("accessibility and safety fixtures: 16 passed");
+console.log("accessibility and safety fixtures: 15 passed");

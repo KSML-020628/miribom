@@ -16,7 +16,6 @@ import type {
 import { visiblePages } from "./lib/guide-visibility";
 import GuideStep from "./ui/GuideStep";
 import HomeUploadStep, { type UploadFile } from "./ui/HomeUploadStep";
-import ProgressHeader from "./ui/ProgressHeader";
 import ReviewStep from "./ui/ReviewStep";
 import UploadPreviewStep from "./ui/UploadPreviewStep";
 
@@ -43,7 +42,6 @@ export default function Home() {
   const [error, setError] = useState("");
   const [errorKind, setErrorKind] = useState<DocumentValidationStatus | null>(null);
   const [fontSize, setFontSize] = useState<FontSize>("normal");
-  const [highContrast, setHighContrast] = useState(false);
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [speaking, setSpeaking] = useState(false);
 
@@ -51,21 +49,17 @@ export default function Home() {
   useEffect(() => () => filesRef.current.forEach((item) => item.preview && URL.revokeObjectURL(item.preview)), []);
   useEffect(() => {
     const savedFontSize = window.localStorage.getItem("miribom-font-size");
-    const savedContrast = window.localStorage.getItem("miribom-high-contrast");
     if (savedFontSize === "normal" || savedFontSize === "large" || savedFontSize === "xlarge") {
       setFontSize(savedFontSize);
     }
-    setHighContrast(savedContrast === "true");
     setPreferencesReady(true);
   }, []);
   useEffect(() => {
     document.documentElement.dataset.fontSize = fontSize;
-    document.documentElement.dataset.contrast = highContrast ? "high" : "normal";
     if (preferencesReady) {
       window.localStorage.setItem("miribom-font-size", fontSize);
-      window.localStorage.setItem("miribom-high-contrast", String(highContrast));
     }
-  }, [fontSize, highContrast, preferencesReady]);
+  }, [fontSize, preferencesReady]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       document.querySelector<HTMLElement>("[data-screen-title]")?.focus();
@@ -317,19 +311,8 @@ export default function Home() {
           <button type="button" className={fontSize === "normal" ? "active" : ""} onClick={() => setFontSize("normal")}>보통</button>
           <button type="button" className={fontSize === "large" ? "active" : ""} onClick={() => setFontSize("large")}>크게</button>
           <button type="button" className={fontSize === "xlarge" ? "active" : ""} onClick={() => setFontSize("xlarge")}>더 크게</button>
-          <button
-            type="button"
-            className={highContrast ? "active contrast" : "contrast"}
-            onClick={() => setHighContrast((value) => !value)}
-            aria-pressed={highContrast}
-            aria-label={highContrast ? "고대비 끄기" : "고대비 켜기"}
-          >
-            {highContrast ? "고대비 끄기" : "고대비 켜기"}
-          </button>
         </div>
       </header>
-
-      {step !== "HOME" && step !== "ANALYZING" && <ProgressHeader step={step} />}
 
       <div className="mainViewport">
         {step === "HOME" && <HomeUploadStep onAdd={addFiles} />}
@@ -378,6 +361,10 @@ export default function Home() {
               </div>
               <h2>{activeProcessing.title}</h2>
               <p className="srOnly">{activeProcessing.detail}</p>
+              <div className="loadingProgressMeta" aria-hidden="true">
+                <span>진행 중</span>
+                <b>{Math.round(loadingProgress)}%</b>
+              </div>
               <div
                 className="loadingBar"
                 role="progressbar"
