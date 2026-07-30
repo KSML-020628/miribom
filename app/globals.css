@@ -21,8 +21,8 @@
   --base-scale: 1;
 }
 
-[data-font-size="large"] { --base-scale: 1.13; }
-[data-font-size="xlarge"] { --base-scale: 1.28; }
+[data-font-size="large"] { --base-scale: 1.25; }
+[data-font-size="xlarge"] { --base-scale: 1.5; }
 [data-contrast="high"] {
   --blue: #004b8d;
   --blue-dark: #002f59;
@@ -41,7 +41,7 @@
 
 * { box-sizing: border-box; }
 html, body { min-width: 320px; min-height: 100%; }
-html { font-size: calc(16px * var(--base-scale)); }
+html { font-size: calc(18px * var(--base-scale)); }
 body {
   margin: 0;
   color: var(--ink);
@@ -90,14 +90,14 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 }
 .brand span { color: var(--blue); font-size: 1.25rem; }
 .accessTools { gap: 7px; }
-.accessTools > span { margin-right: 4px; color: var(--muted); font-size: .85rem; font-weight: 800; }
+.accessTools > span { margin-right: 4px; color: var(--muted); font-size: 1rem; font-weight: 800; }
 .accessTools button {
   min-height: 44px;
   padding: 0 13px;
   background: var(--paper);
   border: 2px solid var(--line);
   border-radius: 9px;
-  font-size: .88rem;
+  font-size: 1rem;
   font-weight: 850;
   cursor: pointer;
 }
@@ -210,7 +210,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .fileThumb span { color: var(--red); font-weight: 950; }
 .fileInfo { min-width: 0; display: grid; gap: 5px; }
 .fileInfo b { font-size: 1.05rem; }
-.fileInfo span { overflow: hidden; color: var(--muted); font-size: .85rem; text-overflow: ellipsis; white-space: nowrap; }
+.fileInfo span { overflow: hidden; color: var(--muted); font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
 .fileControls { display: flex; gap: 5px; }
 .fileControls button { min-width: 44px; min-height: 44px; background: var(--paper); border: 2px solid var(--line); border-radius: 8px; cursor: pointer; }
 .fileControls .remove { color: var(--red); font-size: .78rem; font-weight: 850; }
@@ -241,33 +241,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   font-weight: 850;
   cursor: pointer;
 }
-
-/* 안내문 확인 */
-.reviewStep { max-width: 920px; }
-.reviewHero {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
-  margin: 0 auto 28px;
-  padding: 28px;
-  background: var(--green-soft);
-  border: 3px solid var(--green);
-  border-radius: 18px;
-}
-.reviewCheck { width: 64px; height: 64px; display: grid; place-items: center; color: var(--white); background: var(--green); border-radius: 50%; font-size: 2.2rem; font-weight: 950; }
-.reviewHero div { display: grid; gap: 3px; }
-.reviewHero small { color: var(--green); font-size: 1rem; font-weight: 850; }
-.reviewHero strong { font-size: 2rem; }
-.reviewGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-.reviewField { min-height: 112px; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 18px 20px; background: var(--paper); border: 2px solid var(--line); border-radius: 12px; }
-.reviewField span { color: var(--muted); font-size: .88rem; font-weight: 800; }
-.reviewField strong, .reviewField input { color: var(--ink); font-size: 1.25rem; font-weight: 900; }
-.reviewField input { width: 100%; padding: 8px; background: var(--blue-soft); border: 2px solid var(--blue); border-radius: 7px; }
-.reviewStep > .mainAction { width: 100%; }
-.warningBox { margin: 0 0 22px; padding: 18px; color: var(--ink); background: var(--amber-soft); border: 3px solid var(--amber); border-radius: 12px; }
-.warningBox b { color: var(--amber); }
-.warningBox p { margin: 8px 0 0; font-size: .95rem; }
 
 /* 한 화면 한 질문 */
 .questionScreen { max-width: 880px; display: flex; flex-direction: column; align-items: center; padding: clamp(28px, 4vw, 48px); text-align: center; }
@@ -450,7 +423,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   display: block;
   margin-bottom: 8px;
   color: var(--muted);
-  font-size: .84rem;
+  font-size: 1rem;
   font-weight: 750;
 }
 .chatMessage > p {
@@ -485,8 +458,8 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   background: var(--paper);
   border-left: 5px solid var(--blue);
 }
-.chatEvidence blockquote b { color: var(--blue-dark); font-size: .85rem; }
-.chatEvidence blockquote p { margin: 5px 0 0; color: var(--ink); font-size: .95rem; line-height: 1.5; font-weight: 650; }
+.chatEvidence blockquote b { color: var(--blue-dark); font-size: 1rem; }
+.chatEvidence blockquote p { margin: 5px 0 0; color: var(--ink); font-size: 1rem; line-height: 1.5; font-weight: 650; }
 .chatThinking {
   align-self: flex-start;
   display: flex;
@@ -550,7 +523,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   color: var(--ink);
   background: var(--amber-soft);
   border-top: 2px solid var(--amber);
-  font-size: .84rem;
+  font-size: 1rem;
   line-height: 1.45;
   font-weight: 750;
 }
@@ -619,8 +592,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .fileList li { grid-template-columns: 64px minmax(0, 1fr); }
   .fileThumb { width: 64px; height: 64px; }
   .fileControls { grid-column: 1 / -1; }
-  .reviewGrid { grid-template-columns: 1fr; }
-  .reviewHero { align-items: flex-start; }
   .questionScreen { padding: 20px 15px 28px; }
   .questionScreen .pictureCard.large { width: 180px; height: 180px; }
   .questionCopy h1 { font-size: 2rem; }
@@ -690,3 +661,36 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .confirmationList p { margin: 0; font-size: 16pt; line-height: 1.55; }
   .printFooter { font-size: 11pt; line-height: 1.5; }
 }
+
+/* 나에게 맞추기 패널 */
+.personalizePanel { margin: 0 0 28px; padding: 24px; background: var(--blue-soft); border: 3px solid var(--blue); border-radius: 18px; }
+.personalizeIntro h2 { margin: 6px 0 8px; font-size: 1.6rem; letter-spacing: -.03em; }
+.personalizeHelp { margin: 0; color: var(--ink); font-size: 1.1rem; line-height: 1.5; font-weight: 650; }
+.personalizeCount { display: inline-block; margin-top: 12px; color: var(--blue-dark); font-size: 1.05rem; font-weight: 900; }
+.personalizeList { display: grid; gap: 16px; margin: 20px 0 0; padding: 0; list-style: none; }
+.personalizeCard { padding: 20px; background: var(--paper); border: 3px solid var(--line); border-radius: 14px; }
+.personalizeCard.answered { border-color: var(--green); }
+.personalizeQuestion h3 { margin: 0 0 6px; font-size: 1.35rem; letter-spacing: -.03em; }
+.personalizeQuestion p { margin: 0 0 6px; color: var(--muted); font-size: 1.05rem; line-height: 1.5; font-weight: 650; }
+.personalizeListen { min-height: 44px; padding: 0 14px; color: var(--blue-dark); background: var(--blue-soft); border: 2px solid var(--blue); border-radius: 9px; font-size: 1rem; font-weight: 900; cursor: pointer; }
+.personalizeChoices { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+.personalizeChoice { min-height: 72px; min-width: 130px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 18px; background: var(--paper); border: 3px solid var(--blue); border-radius: 14px; cursor: pointer; }
+.personalizeChoice span { width: 40px; height: 40px; display: grid; place-items: center; color: var(--white); background: var(--blue); border-radius: 50%; font-size: 1.4rem; font-weight: 950; }
+.personalizeChoice b { font-size: 1.2rem; }
+.personalizeChoice.selected { background: var(--blue-soft); box-shadow: inset 0 0 0 3px var(--blue-dark); }
+.personalizeUnanswered { margin: 12px 0 0; color: var(--amber); font-size: 1rem; font-weight: 900; }
+.personalizeConfirm { margin: 12px 0 0; color: var(--amber); font-size: 1rem; font-weight: 800; }
+
+/* 안내서 내 고치기 */
+.editToggle { min-height: 48px; margin-top: 10px; padding: 0 16px; color: var(--blue-dark); background: var(--paper); border: 2px solid var(--blue); border-radius: 10px; font-size: 1rem; font-weight: 900; cursor: pointer; }
+.editFields { display: grid; gap: 10px; margin-top: 12px; }
+.editFields label { display: grid; gap: 6px; color: var(--muted); font-size: 1rem; font-weight: 800; }
+.editFields input { min-height: 52px; padding: 0 12px; color: var(--ink); background: var(--blue-soft); border: 2px solid var(--blue); border-radius: 8px; font-size: 1.15rem; font-weight: 800; }
+.editDone { min-height: 52px; color: var(--white); background: var(--green); border: 0; border-radius: 10px; font-size: 1.05rem; font-weight: 900; cursor: pointer; }
+
+/* 안내서 도움·전화 */
+.guideEmpty { margin: 24px 0; padding: 24px; text-align: center; color: var(--blue-dark); background: var(--blue-soft); border: 2px dashed var(--blue); border-radius: 14px; font-size: 1.2rem; font-weight: 800; }
+.guideHelp { margin-top: 22px; padding: 18px 20px; background: var(--green-soft); border-left: 6px solid var(--green); border-radius: 10px; }
+.callHospital { display: inline-block; min-height: 56px; padding: 14px 20px; color: var(--white); background: var(--green); border-radius: 12px; font-size: 1.2rem; font-weight: 900; text-decoration: none; }
+.callHospitalNote { display: inline-block; color: var(--ink); font-size: 1.1rem; font-weight: 800; }
+.guideHelpText { margin: 12px 0 0; color: var(--ink); font-size: 1.05rem; line-height: 1.5; font-weight: 650; }
