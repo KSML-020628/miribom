@@ -17,12 +17,18 @@ const STAGE_ORDER: Record<string, number> = {
   "검사 후": 50,
 };
 
-// 이 안내문이 켜지는 답의 값 목록을 계산한다.
-function activatingValues(instruction: ExtractedInstruction): string[] {
-  if (instruction.condition_id === "BLOOD_THINNER_COUNT") {
-    return instruction.condition_value ? [instruction.condition_value] : ["one", "two_or_more"];
+// 이 안내문이 켜지는 답의 값 목록을, 실제 질문 옵션과 맞춰 계산한다.
+// - condition_value가 그 질문의 "긍정" 옵션이면 그 값만 사용.
+// - 아니면(빈 값이거나 "yes"처럼 옵션에 없으면) 부정/모름을 뺀 모든 옵션을 사용(안전하게 표시).
+function activatingValues(instruction: ExtractedInstruction, question: PersonalizationQuestion): string[] {
+  const optionValues = question.options.map((option) => option.value);
+  const negatives = new Set(["no", "none", "unknown"]);
+  const positives = optionValues.filter((value) => !negatives.has(value));
+  const specified = instruction.condition_value;
+  if (specified && optionValues.includes(specified) && !negatives.has(specified)) {
+    return [specified];
   }
-  return [instruction.condition_value || "yes"];
+  return positives.length ? positives : optionValues;
 }
 
 function questionForCondition(instruction: ExtractedInstruction, questions: PersonalizationQuestion[]): PersonalizationQuestion | undefined {
@@ -172,7 +178,7 @@ export async function buildFinalGuide(
     // 조건부이면서 매칭되는 질문이 있을 때만 activation을 붙인다.
     // 질문이 없으면 개인화할 방법이 없으므로 공통 안내로 항상 보여준다(안전).
     const activation = isConditional && question
-      ? { question_id: question.question_id, values: activatingValues(instruction) }
+      ? { question_id: question.question_id, values: activatingValues(instruction, question) }
       : undefined;
     return {
       page_number: index + 2,

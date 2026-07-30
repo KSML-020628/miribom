@@ -10,6 +10,7 @@ import type {
   ParseResponse,
   ProcessingStage,
 } from "./lib/types";
+import { visiblePages } from "./lib/guide-visibility";
 import GuideStep from "./ui/GuideStep";
 import ProgressHeader from "./ui/ProgressHeader";
 import UploadStep, { type UploadFile } from "./ui/UploadStep";
@@ -187,7 +188,7 @@ export default function Home() {
 
   function speakAll() {
     if (!guide) return;
-    speak(guide.pages.map(guidePageSpeechText).filter(Boolean).join(". "));
+    speak(visiblePages(guide.pages, answers).map(guidePageSpeechText).filter(Boolean).join(". "));
   }
 
   function restart() {

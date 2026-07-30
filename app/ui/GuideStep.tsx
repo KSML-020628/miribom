@@ -83,6 +83,7 @@ export default function GuideStep({
 }: Props) {
   const [editing, setEditing] = useState(false);
   const shown = visiblePages(guide.pages, answers);
+  const unansweredCount = guide.personalization_questions.filter((question) => !answers[question.question_id]).length;
   const safeIndex = Math.min(pageIndex, Math.max(0, shown.length - 1));
   const page = shown[safeIndex];
 
@@ -117,6 +118,12 @@ export default function GuideStep({
         onAnswer={onAnswer}
         onSpeak={onSpeak}
       />
+
+      {unansweredCount > 0 && (
+        <p className="guideHiddenNote" role="status">
+          위 &ldquo;나에게 맞추기&rdquo;에서 아직 답하지 않은 질문이 {unansweredCount}개 있어요. 답하면 나에게 맞는 안내가 더 나타나요.
+        </p>
+      )}
 
       {overview ? (
         <div className="pageOverview">

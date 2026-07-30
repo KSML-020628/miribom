@@ -51,7 +51,7 @@ body {
 }
 button, input { font: inherit; }
 button { color: inherit; }
-button:focus-visible, input:focus-visible, [role="button"]:focus-visible {
+button:focus-visible, input:focus-visible, a:focus-visible, [role="button"]:focus-visible {
   outline: 5px solid var(--focus);
   outline-offset: 4px;
 }
@@ -213,7 +213,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .fileInfo span { overflow: hidden; color: var(--muted); font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
 .fileControls { display: flex; gap: 5px; }
 .fileControls button { min-width: 44px; min-height: 44px; background: var(--paper); border: 2px solid var(--line); border-radius: 8px; cursor: pointer; }
-.fileControls .remove { color: var(--red); font-size: .78rem; font-weight: 850; }
+.fileControls .remove { color: var(--red); font-size: 1rem; font-weight: 850; }
 .mainAction {
   min-height: 76px;
   padding: 0 30px;
@@ -315,7 +315,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .caution .importanceLabel b, .ask_hospital .importanceLabel b { background: var(--amber); }
 .guideCopy h2 { max-width: 18ch; margin: 14px 0 16px; font-size: clamp(1.9rem, 3.2vw, 2.6rem); line-height: 1.2; letter-spacing: -.045em; }
 .guideCopy p { max-width: 34ch; margin: 7px 0; color: var(--ink); font-size: 1.2rem; line-height: 1.5; font-weight: 700; }
-.guideCopy aside { width: fit-content; margin-top: 18px; padding: 8px 12px; color: var(--blue-dark); background: var(--blue-soft); border-radius: 8px; font-size: .84rem; font-weight: 800; }
+.guideCopy aside { width: fit-content; margin-top: 18px; padding: 8px 12px; color: var(--blue-dark); background: var(--blue-soft); border-radius: 8px; font-size: 1rem; font-weight: 800; }
 .pageListen { align-self: flex-end; min-width: 180px; min-height: 56px; margin-top: 20px; color: var(--blue-dark); background: var(--blue-soft); border: 3px solid var(--blue); border-radius: 11px; font-size: 1rem; font-weight: 900; cursor: pointer; }
 .guideBottomActions { display: flex; justify-content: center; gap: 12px; margin-top: 20px; }
 .guideBottomActions .chatOpenButton {
@@ -694,3 +694,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .callHospital { display: inline-block; min-height: 56px; padding: 14px 20px; color: var(--white); background: var(--green); border-radius: 12px; font-size: 1.2rem; font-weight: 900; text-decoration: none; }
 .callHospitalNote { display: inline-block; color: var(--ink); font-size: 1.1rem; font-weight: 800; }
 .guideHelpText { margin: 12px 0 0; color: var(--ink); font-size: 1.05rem; line-height: 1.5; font-weight: 650; }
+
+/* 미응답 안내 배너 */
+.guideHiddenNote { margin: 0 0 20px; padding: 14px 18px; color: var(--amber); background: var(--amber-soft); border-left: 6px solid var(--amber); border-radius: 10px; font-size: 1.05rem; line-height: 1.5; font-weight: 800; }
