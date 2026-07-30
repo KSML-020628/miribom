@@ -319,7 +319,13 @@ export interface ChatTurn {
   intent?: ChatIntent;
 }
 
-export type AppStep = "upload" | "review" | "questions" | "guide";
+export type AppStep =
+  | "HOME"
+  | "UPLOAD_REVIEW"
+  | "ANALYZING"
+  | "DOCUMENT_REVIEW"
+  | "QUESTIONS"
+  | "GUIDE";
 export type ProcessingStage = "idle" | "parsing" | "analyzing" | "generating" | "done" | "error";
 
 export const AVAILABLE_IMAGE_TAGS = [

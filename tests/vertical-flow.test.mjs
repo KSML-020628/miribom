@@ -1,0 +1,57 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const root = new URL("../", import.meta.url);
+const read = (path) => readFileSync(new URL(path, root), "utf8");
+
+const home = read("app/ui/HomeUploadStep.tsx");
+assert.match(home, /병원 안내문을<br \/>쉽게 바꿔 드려요/);
+assert.equal((home.match(/className="uploadChoiceCard/g) || []).length, 2);
+assert.match(home, /aria-label="저장된 안내문 사진 선택"/);
+assert.match(home, /aria-label="카메라로 안내문 사진 찍기"/);
+assert.match(home, /accept="image\/\*,\.pdf,application\/pdf"/);
+assert.match(home, /multiple/);
+assert.match(home, /capture="environment"/);
+assert.doesNotMatch(home, /dropArea|dragOver|기존 프로젝트/);
+
+const preview = read("app/ui/UploadPreviewStep.tsx");
+assert.match(preview, /안내문을 확인해 주세요/);
+assert.match(preview, /안내문 쉽게 바꾸기/);
+assert.match(preview, /한 장 더 추가/);
+assert.match(preview, /다시 찍기/);
+assert.match(preview, /onMove/);
+assert.match(preview, /onRemove/);
+
+const page = read("app/page.tsx");
+assert.match(page, /setStep\("UPLOAD_REVIEW"\)/);
+assert.match(page, /setStep\("ANALYZING"\)/);
+assert.match(page, /setStep\("DOCUMENT_REVIEW"\)/);
+assert.match(page, /setStep\("QUESTIONS"\)/);
+assert.match(page, /setStep\("GUIDE"\)/);
+assert.match(page, /setQuestionIndex\(\(current\) => current \+ 1\)/);
+
+const question = read("app/ui/QuestionStep.tsx");
+assert.equal((question.match(/<h1/g) || []).length, 1);
+assert.match(question, /aria-label=\{speaking \? "읽기 멈추기" : "현재 질문 듣기"\}/);
+assert.match(question, /onBack/);
+
+const guide = read("app/ui/GuideStep.tsx");
+assert.match(guide, /groupGuidePages/);
+assert.match(guide, /groups\.map/);
+assert.match(guide, /className="verticalGuideDocument"/);
+assert.match(guide, /PDF 저장/);
+assert.doesNotMatch(guide, /pageArrow|bookViewer|onPage|pageIndex|overview|carousel|currentSlide/);
+
+const instruction = read("app/ui/GuideInstructionBlock.tsx");
+assert.match(instruction, /className=\{`guideInstruction/);
+assert.match(instruction, /PictureCard/);
+assert.match(instruction, /instructionTime/);
+
+const css = read("app/globals.css");
+assert.match(css, /\.verticalGuideDocument\s*\{[\s\S]*?width: min\(760px, 100%\)/);
+assert.match(css, /\.guideInstruction\s*\{[\s\S]*?break-inside: avoid/);
+assert.match(css, /@media \(max-width: 370px\)/);
+assert.match(css, /@media print[\s\S]*?\.interactiveOnly/);
+assert.match(css, /\.instructionContent \{ display: grid/);
+
+console.log("vertical UI flow fixtures: 33 passed");

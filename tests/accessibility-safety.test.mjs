@@ -25,8 +25,8 @@ assert.match(reviewSource, /type="time"/);
 assert.match(reviewSource, /잘 모르겠어요/);
 
 const guideSource = read("app/ui/GuideStep.tsx");
-assert.match(guideSource, /className="instructionTime"/);
-assert.match(guideSource, /aria-label=\{speaking \? "읽기 멈추기" : "이 페이지 읽기"\}/);
+assert.match(guideSource, /className="verticalGuideDocument"/);
+assert.match(guideSource, /speaking \? "멈추기" : "전체 듣기"/);
 
 const css = read("app/globals.css");
 assert.match(css, /--font-time:/);

@@ -6,10 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "tsc --noEmit",
     "test:merge": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/document-merge.test.mjs",
     "test:accessibility": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/accessibility-safety.test.mjs",
-    "test": "npm run test:merge && npm run test:accessibility"
+    "test:ui-flow": "node tests/vertical-flow.test.mjs",
+    "test": "npm run test:merge && npm run test:accessibility && npm run test:ui-flow"
   },
   "dependencies": {
     "next": "^16.0.0",

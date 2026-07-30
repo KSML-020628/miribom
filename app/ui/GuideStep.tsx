@@ -1,23 +1,11 @@
 "use client";
 
-import type { FinalGuideResult, GuidePage, ParsedPage } from "@/app/lib/types";
+import type { FinalGuideResult, ParsedPage } from "@/app/lib/types";
 import GuideChat from "./GuideChat";
-import PictureCard from "./PictureCard";
-
-const IMPORTANCE = {
-  required: { symbol: "!", label: "꼭 지켜 주세요" },
-  caution: { symbol: "△", label: "조심해 주세요" },
-  ask_hospital: { symbol: "?", label: "병원에 물어보세요" },
-  information: { symbol: "i", label: "알아두세요" },
-};
+import GuideSection from "./GuideSection";
 
 interface Props {
   guide: FinalGuideResult;
-  pageIndex: number;
-  overview: boolean;
-  onPage: (index: number) => void;
-  onOverview: () => void;
-  onListenPage: (page: GuidePage) => void;
   onListenAll: () => void;
   onEditAnswers: () => void;
   onRestart: () => void;
@@ -28,44 +16,29 @@ interface Props {
   onStopSpeaking: () => void;
 }
 
-function compactWhen(section: string, when?: string): string {
-  if (!when) return "";
-  const trimmed = when.trim();
-  return trimmed.startsWith(section) ? trimmed.slice(section.length).trim() : trimmed;
+interface SectionGroup {
+  id: string;
+  title: string;
+  pages: FinalGuideResult["pages"];
 }
 
-function GuidePageView({ page, total, onListen, speaking = false }: { page: GuidePage; total: number; onListen: () => void; speaking?: boolean }) {
-  const importance = IMPORTANCE[page.importance];
-  const displayWhen = compactWhen(page.section, page.when);
-  return (
-    <article className={`guidePage ${page.importance}`}>
-      <header className="guidePageHeader">
-        <div><span>{page.section}</span>{displayWhen && <b className="instructionTime">{displayWhen}</b>}</div>
-        <small>{page.page_number} / {total}</small>
-      </header>
-      <div className="guidePageBody">
-        <PictureCard tag={page.image_tag} />
-        <div className="guideCopy">
-          <span className="importanceLabel"><b aria-hidden="true">{importance.symbol}</b>{importance.label}</span>
-          <h2>{page.title}</h2>
-          {page.body.map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}
-          {page.personalized && page.personalization_note && <aside>맞춤 안내 · {page.personalization_note}</aside>}
-        </div>
-      </div>
-      <button className="pageListen" type="button" onClick={onListen} aria-label={speaking ? "읽기 멈추기" : "이 페이지 읽기"}>
-        <span aria-hidden="true">{speaking ? "⏹" : "🔊"}</span> {speaking ? "읽기 멈추기" : "듣기"}
-      </button>
-    </article>
-  );
+function groupGuidePages(guide: FinalGuideResult): SectionGroup[] {
+  const groups = new Map<string, FinalGuideResult["pages"]>();
+  for (const page of guide.pages) {
+    if (page.section === "표지") continue;
+    const current = groups.get(page.section) || [];
+    current.push(page);
+    groups.set(page.section, current);
+  }
+  return [...groups.entries()].map(([title, pages], index) => ({
+    id: `guide-section-${index + 1}`,
+    title,
+    pages,
+  }));
 }
 
 export default function GuideStep({
   guide,
-  pageIndex,
-  overview,
-  onPage,
-  onOverview,
-  onListenPage,
   onListenAll,
   onEditAnswers,
   onRestart,
@@ -75,51 +48,90 @@ export default function GuideStep({
   speaking,
   onStopSpeaking,
 }: Props) {
-  const page = guide.pages[pageIndex];
+  const groups = groupGuidePages(guide);
+  const keyActions = guide.pages.filter((page) => page.section !== "표지").slice(0, 3);
+
+  function moveToSection(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
-    <section className="guideScreen" aria-labelledby="guide-heading">
-      <div className="guideToolbar">
-        <div><p className="eyebrow">나를 위한 쉬운 안내서</p><h1 id="guide-heading" data-screen-title tabIndex={-1}>{guide.project.procedure_name} 준비 안내</h1></div>
-        <div className="guideActions">
-          <button type="button" onClick={speaking ? onStopSpeaking : onListenAll}>
-            <span aria-hidden="true">{speaking ? "⏹" : "🔊"}</span> {speaking ? "멈추기" : "전체 듣기"}
-          </button>
-          <button type="button" onClick={onOverview}>{overview ? "한 장씩 보기" : "전체 페이지"}</button>
-          <button className="pdfButton" type="button" onClick={onPrint}>PDF로 저장하기</button>
-        </div>
+    <section className="verticalGuideScreen" aria-labelledby="guide-heading">
+      <div className="guideStickyToolbar interactiveOnly" aria-label="안내서 도구">
+        <button type="button" onClick={speaking ? onStopSpeaking : onListenAll}>
+          <span aria-hidden="true">{speaking ? "⏹" : "🔊"}</span>
+          {speaking ? "멈추기" : "전체 듣기"}
+        </button>
+        <button className="pdfButton" type="button" onClick={onPrint}>PDF 저장</button>
       </div>
 
-      {overview ? (
-        <div className="pageOverview">
-          {guide.pages.map((item, index) => (
-            <button type="button" key={item.page_number} onClick={() => { onPage(index); onOverview(); }}>
-              <span>{item.page_number}쪽 · {item.section}</span><b>{item.title}</b>
-            </button>
+      <article className="verticalGuideDocument">
+        <header className="guideDocumentHeader">
+          <p>나를 위한 쉬운 안내서</p>
+          <h1 id="guide-heading" data-screen-title tabIndex={-1}>
+            {guide.project.procedure_name}<br />준비 안내
+          </h1>
+          <dl>
+            <div><dt>검사</dt><dd>{guide.project.procedure_name || "확인 필요"}</dd></div>
+            <div><dt>시간</dt><dd>{guide.project.appointment_time || "확인 필요"}</dd></div>
+            {guide.project.procedure_date && <div><dt>날짜</dt><dd>{guide.project.procedure_date}</dd></div>}
+          </dl>
+        </header>
+
+        {keyActions.length > 0 && (
+          <section className="guideKeySummary" aria-labelledby="key-summary-heading">
+            <h2 id="key-summary-heading">꼭 기억하세요</h2>
+            <ul>
+              {keyActions.map((page) => (
+                <li key={page.page_number}>
+                  <b>{page.when || page.section}</b>
+                  <span>{page.title}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {groups.length > 1 && (
+          <nav className="guideToc interactiveOnly" aria-label="안내서 빠른 이동">
+            {groups.map((group) => (
+              <button type="button" key={group.id} onClick={() => moveToSection(group.id)}>
+                {group.title}
+              </button>
+            ))}
+            {guide.hospital_confirmation.length > 0 && (
+              <button type="button" onClick={() => moveToSection("hospital-confirmation")}>병원 확인</button>
+            )}
+          </nav>
+        )}
+
+        <div className="guideSections">
+          {groups.map((group) => (
+            <GuideSection key={group.id} id={group.id} title={group.title} pages={group.pages} />
           ))}
         </div>
-      ) : (
-        <div className="bookViewer">
-          <button className="pageArrow previous" type="button" disabled={pageIndex === 0} onClick={() => onPage(pageIndex - 1)} aria-label="이전 페이지">‹</button>
-          <GuidePageView page={page} total={guide.pages.length} speaking={speaking} onListen={() => speaking ? onStopSpeaking() : onListenPage(page)} />
-          <button className="pageArrow next" type="button" disabled={pageIndex === guide.pages.length - 1} onClick={() => onPage(pageIndex + 1)} aria-label="다음 페이지">›</button>
-        </div>
-      )}
 
-      <div className="guideBottomActions">
+        {guide.hospital_confirmation.length > 0 && (
+          <section className="guideSection hospitalConfirmation" id="hospital-confirmation" aria-labelledby="hospital-confirmation-heading">
+            <h2 id="hospital-confirmation-heading">병원에 확인할 내용</h2>
+            <div className="confirmationList">
+              {guide.hospital_confirmation.map((item, index) => (
+                <article key={`${item.title}-${index}`}>
+                  <span aria-hidden="true">?</span>
+                  <div><h3>{item.title}</h3><p>{item.body}</p></div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <footer className="guideDocumentFooter">{guide.footer}</footer>
+      </article>
+
+      <div className="guideBottomActions interactiveOnly">
         <GuideChat guide={guide} documentPages={documentPages} onSpeak={onSpeak} speaking={speaking} onStopSpeak={onStopSpeaking} />
         <button type="button" onClick={onEditAnswers}>답변 다시 보기</button>
         <button type="button" onClick={onRestart}>새 안내문 만들기</button>
-      </div>
-
-      <div className="printOnly">
-        {guide.pages.map((item) => <GuidePageView key={item.page_number} page={item} total={guide.pages.length} onListen={() => undefined} />)}
-        {guide.hospital_confirmation.length > 0 && (
-          <article className="guidePage ask_hospital confirmationPage">
-            <header className="guidePageHeader"><div><span>병원에 확인할 내용</span></div></header>
-            <div className="confirmationList">{guide.hospital_confirmation.map((item, index) => <div key={`${item.title}-${index}`}><h2>{item.title}</h2><p>{item.body}</p></div>)}</div>
-          </article>
-        )}
-        <p className="printFooter">{guide.footer}</p>
       </div>
     </section>
   );

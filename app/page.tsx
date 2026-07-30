@@ -14,10 +14,11 @@ import type {
   ProcessingStage,
 } from "./lib/types";
 import GuideStep from "./ui/GuideStep";
+import HomeUploadStep, { type UploadFile } from "./ui/HomeUploadStep";
 import ProgressHeader from "./ui/ProgressHeader";
 import QuestionStep from "./ui/QuestionStep";
 import ReviewStep from "./ui/ReviewStep";
-import UploadStep, { type UploadFile } from "./ui/UploadStep";
+import UploadPreviewStep from "./ui/UploadPreviewStep";
 
 type FontSize = "normal" | "large" | "xlarge";
 
@@ -28,16 +29,16 @@ const PROCESSING_COPY: Record<Exclude<ProcessingStage, "idle" | "done" | "error"
 };
 
 export default function Home() {
-  const [step, setStep] = useState<AppStep>("upload");
+  const [step, setStep] = useState<AppStep>("HOME");
   const [files, setFiles] = useState<UploadFile[]>([]);
   const filesRef = useRef<UploadFile[]>([]);
+  const requestControllerRef = useRef<AbortController | null>(null);
+  const processingReturnStepRef = useRef<AppStep>("UPLOAD_REVIEW");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [sourcePages, setSourcePages] = useState<ParsedPage[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [questionIndex, setQuestionIndex] = useState(0);
   const [guide, setGuide] = useState<FinalGuideResult | null>(null);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [overview, setOverview] = useState(false);
   const [stage, setStage] = useState<ProcessingStage>("idle");
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState("");
@@ -98,21 +99,30 @@ export default function Home() {
 
   function addFiles(list: FileList | null) {
     if (!list) return;
-    const accepted = Array.from(list).filter((file) => ["image/jpeg", "image/png", "application/pdf"].includes(file.type));
+    const accepted = Array.from(list).filter((file) => ["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file.type));
     const additions = accepted.map((file, index) => ({
       id: `${Date.now()}-${index}-${file.name}`,
       file,
       preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
     }));
-    setFiles((current) => [...current, ...additions].slice(0, 10));
-    setError(accepted.length === list.length ? "" : "PDF, PNG, JPG 파일만 올릴 수 있어요.");
+    if (additions.length) {
+      setFiles((current) => [...current, ...additions].slice(0, 10));
+      setAnalysis(null);
+      setSourcePages([]);
+      setAnswers({});
+      setGuide(null);
+      setStep("UPLOAD_REVIEW");
+    }
+    setError(accepted.length === list.length ? "" : "PDF, PNG, JPG, WEBP 파일만 올릴 수 있어요.");
   }
 
   function removeFile(id: string) {
     setFiles((current) => {
       const target = current.find((item) => item.id === id);
       if (target?.preview) URL.revokeObjectURL(target.preview);
-      return current.filter((item) => item.id !== id);
+      const next = current.filter((item) => item.id !== id);
+      if (!next.length) window.setTimeout(() => setStep("HOME"), 0);
+      return next;
     });
   }
 
@@ -141,10 +151,14 @@ export default function Home() {
     setError("");
     setErrorKind(null);
     setStage("parsing");
+    processingReturnStepRef.current = "UPLOAD_REVIEW";
+    setStep("ANALYZING");
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
     try {
       const formData = new FormData();
       files.forEach((item) => formData.append("documents", item.file));
-      const parseResponse = await fetch("/api/parse", { method: "POST", body: formData });
+      const parseResponse = await fetch("/api/parse", { method: "POST", body: formData, signal: controller.signal });
       if (!parseResponse.ok) {
         const apiError = await readError(parseResponse);
         setErrorKind(apiError.validationStatus || null);
@@ -158,6 +172,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parsed),
+        signal: controller.signal,
       });
       if (!analyzeResponse.ok) throw new Error((await readError(analyzeResponse)).error);
       const nextAnalysis = await analyzeResponse.json() as AnalysisResult;
@@ -166,10 +181,14 @@ export default function Home() {
       setQuestionIndex(0);
       await finishLoadingProgress();
       setStage("done");
-      setStep("review");
+      setStep("DOCUMENT_REVIEW");
     } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
       setStage("error");
+      setStep("UPLOAD_REVIEW");
       setError(caught instanceof Error ? caught.message : "안내문을 읽지 못했어요. 다시 찍어 주세요.");
+    } finally {
+      requestControllerRef.current = null;
     }
   }
 
@@ -177,6 +196,10 @@ export default function Home() {
     if (!analysis) return;
     setStage("generating");
     setError("");
+    processingReturnStepRef.current = analysis.personalization_questions.length ? "QUESTIONS" : "DOCUMENT_REVIEW";
+    setStep("ANALYZING");
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
     try {
       const response = await fetch("/api/finalize", {
         method: "POST",
@@ -189,18 +212,21 @@ export default function Home() {
           procedures: analysis.procedures,
           conflicts: analysis.conflicts,
         }),
+        signal: controller.signal,
       });
       if (!response.ok) throw new Error((await readError(response)).error);
       const result = await response.json() as FinalGuideResult;
       setGuide(result);
-      setPageIndex(0);
-      setOverview(false);
       await finishLoadingProgress();
       setStage("done");
-      setStep("guide");
+      setStep("GUIDE");
     } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
       setStage("error");
+      setStep(processingReturnStepRef.current);
       setError(caught instanceof Error ? caught.message : "맞춤 안내서를 만들지 못했어요.");
+    } finally {
+      requestControllerRef.current = null;
     }
   }
 
@@ -211,7 +237,7 @@ export default function Home() {
       return;
     }
     setQuestionIndex(0);
-    setStep("questions");
+    setStep("QUESTIONS");
   }
 
   function answerQuestion(value: string) {
@@ -227,7 +253,7 @@ export default function Home() {
   }
 
   function backQuestion() {
-    if (questionIndex === 0) setStep("review");
+    if (questionIndex === 0) setStep("DOCUMENT_REVIEW");
     else setQuestionIndex((current) => current - 1);
   }
 
@@ -274,10 +300,6 @@ export default function Home() {
     return [page.when, page.title, ...body].filter(Boolean).join(". ");
   }
 
-  function speakPage(page: GuidePage) {
-    speak(guidePageSpeechText(page));
-  }
-
   function speakAll() {
     if (!guide) return;
     speak(guide.pages.map(guidePageSpeechText).filter(Boolean).join(". "));
@@ -293,8 +315,16 @@ export default function Home() {
     setError("");
     setErrorKind(null);
     setStage("idle");
-    setStep("upload");
+    setStep("HOME");
     stopSpeaking();
+  }
+
+  function cancelProcessing() {
+    requestControllerRef.current?.abort();
+    requestControllerRef.current = null;
+    setStage("idle");
+    setLoadingProgress(0);
+    setStep(processingReturnStepRef.current);
   }
 
   const processing = stage === "parsing" || stage === "analyzing" || stage === "generating";
@@ -302,11 +332,11 @@ export default function Home() {
   const currentQuestion = analysis?.personalization_questions[questionIndex];
 
   return (
-    <main className="appShell">
+    <main className={`appShell step-${step.toLowerCase()}`}>
       <header className="appHeader">
         <div className="brandGroup">
-          <span className="hospitalLogo">[병원 로고]</span>
           <a className="brand" href="#" onClick={(event) => { event.preventDefault(); }}><span aria-hidden="true">◉</span>미리봄</a>
+          <span className="brandTagline">검사 안내를 쉬운 말로</span>
         </div>
         <div className="accessTools" aria-label="화면 보기 설정">
           <span>글자 크기</span>
@@ -325,22 +355,33 @@ export default function Home() {
         </div>
       </header>
 
-      <ProgressHeader step={step} />
+      {step !== "HOME" && step !== "ANALYZING" && <ProgressHeader step={step} />}
 
       <div className="mainViewport">
-        {step === "upload" && <UploadStep files={files} busy={processing} onAdd={addFiles} onRemove={removeFile} onMove={moveFile} onAnalyze={analyze} />}
-        {step === "review" && analysis && (
+        {step === "HOME" && <HomeUploadStep onAdd={addFiles} />}
+        {step === "UPLOAD_REVIEW" && (
+          <UploadPreviewStep
+            files={files}
+            busy={processing}
+            onAdd={addFiles}
+            onRemove={removeFile}
+            onMove={moveFile}
+            onAnalyze={analyze}
+            onBack={restart}
+          />
+        )}
+        {step === "DOCUMENT_REVIEW" && analysis && (
           <ReviewStep
             analysis={analysis}
             onChangeField={(field, value) => setAnalysis({ ...analysis, document: { ...analysis.document, [field]: value } })}
             onChangeAppointment={changeAppointment}
             onConfirm={startQuestions}
-            onBack={() => setStep("upload")}
+            onBack={() => setStep("UPLOAD_REVIEW")}
             speaking={speaking}
             onListen={() => toggleSpeech(`${analysis.document.procedure_name} 안내문으로 확인했어요. 이 안내문이 맞나요?`)}
           />
         )}
-        {step === "questions" && currentQuestion && (
+        {step === "QUESTIONS" && currentQuestion && (
           <QuestionStep
             question={currentQuestion}
             index={questionIndex}
@@ -352,16 +393,11 @@ export default function Home() {
             onListen={() => toggleSpeech(`${currentQuestion.question}. ${currentQuestion.helper_text}. ${currentQuestion.options.map((option) => option.label).join(", ")}`)}
           />
         )}
-        {step === "guide" && guide && (
+        {step === "GUIDE" && guide && (
           <GuideStep
             guide={guide}
-            pageIndex={pageIndex}
-            overview={overview}
-            onPage={setPageIndex}
-            onOverview={() => setOverview((value) => !value)}
-            onListenPage={speakPage}
             onListenAll={speakAll}
-            onEditAnswers={() => { setQuestionIndex(0); setStep("questions"); }}
+            onEditAnswers={() => { setQuestionIndex(0); setStep("QUESTIONS"); }}
             onRestart={restart}
             onPrint={() => window.print()}
             documentPages={sourcePages}
@@ -391,6 +427,7 @@ export default function Home() {
               >
                 <i style={{ width: `${loadingProgress}%` }} />
               </div>
+              <button className="cancelProcessing" type="button" onClick={cancelProcessing}>취소</button>
             </div>
           </div>
         )}
