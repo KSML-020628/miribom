@@ -13,6 +13,7 @@
     "test": "npm run test:merge && npm run test:accessibility && npm run test:ui-flow"
   },
   "dependencies": {
+    "geist": "^1.7.2",
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
