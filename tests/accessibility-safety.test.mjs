@@ -23,6 +23,10 @@ const reviewSource = read("app/ui/ReviewStep.tsx");
 assert.match(reviewSource, /type="date"/);
 assert.match(reviewSource, /type="time"/);
 assert.match(reviewSource, /잘 모르겠어요/);
+const alwaysVisibleReview = reviewSource.split("{editing &&")[0];
+assert.match(alwaysVisibleReview, /type="date"/);
+assert.match(alwaysVisibleReview, /type="time"/);
+assert.match(alwaysVisibleReview, /검사 날짜 바로 선택/);
 
 const guideSource = read("app/ui/GuideStep.tsx");
 assert.match(guideSource, /className="verticalGuideDocument screenOnly"/);
@@ -34,4 +38,4 @@ assert.match(css, /--font-time:/);
 assert.match(css, /\[data-contrast="high"\]/);
 assert.match(css, /--line: #000000/);
 
-console.log("accessibility and safety fixtures: 13 passed");
+console.log("accessibility and safety fixtures: 16 passed");

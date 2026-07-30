@@ -46,10 +46,12 @@ export default function ReviewStep({
   speaking,
 }: Props) {
   const [editing, setEditing] = useState(false);
-  const [exactTimeMode, setExactTimeMode] = useState(false);
   const { document } = analysis;
   const primaryProcedure = analysis.procedures[0];
   const period = primaryProcedure?.appointment_period || "unknown";
+  const exactTime = /^\d{2}:\d{2}$/.test(document.appointment_time)
+    ? document.appointment_time
+    : "";
   const regimen = analysis.procedures.map((item) => item.regimen_name).find(Boolean);
 
   return (
@@ -69,9 +71,57 @@ export default function ReviewStep({
       <div className="reviewSummary" role="status" aria-label="안내문 분석 결과">
         <p><span>안내문</span><strong>{analysis.documents.length}개 · {document.page_count}쪽</strong></p>
         <p><span>검사</span><strong>{document.procedure_name || "확인 필요"}</strong></p>
-        <p><span>시간</span><strong>{period === "morning" ? "오전" : period === "afternoon" ? "오후" : document.appointment_time || "확인 필요"}</strong></p>
+        <div className="reviewSummaryControl">
+          <span>시간</span>
+          <fieldset className="inlineTimeChoices">
+            <legend className="srOnly">검사 시간 바로 선택</legend>
+            <button
+              type="button"
+              aria-pressed={period === "morning" && !exactTime}
+              onClick={() => onChangeAppointment("morning")}
+            >
+              오전
+            </button>
+            <button
+              type="button"
+              aria-pressed={period === "afternoon" && !exactTime}
+              onClick={() => onChangeAppointment("afternoon")}
+            >
+              오후
+            </button>
+            <button
+              type="button"
+              aria-pressed={period === "unknown" && !exactTime}
+              onClick={() => onChangeAppointment("unknown")}
+            >
+              잘 모르겠어요
+            </button>
+            <label className="inlineTimeInput">
+              <span>정확한 시간</span>
+              <input
+                type="time"
+                value={exactTime}
+                onChange={(event) => {
+                  const hour = Number(event.target.value.split(":")[0]);
+                  onChangeAppointment(hour < 12 ? "morning" : "afternoon", event.target.value);
+                }}
+              />
+            </label>
+          </fieldset>
+        </div>
         {regimen && <p><span>장 청소약</span><strong>{regimen}</strong></p>}
-        <p><span>검사 날짜</span><strong>{koreanDate(document.procedure_date)}</strong></p>
+        <label className="reviewSummaryControl reviewDateControl">
+          <span>검사 날짜</span>
+          <span className="reviewDatePicker">
+            <strong>{koreanDate(document.procedure_date)}</strong>
+            <input
+              type="date"
+              aria-label="검사 날짜 바로 선택"
+              value={dateInputValue(document.procedure_date)}
+              onChange={(event) => onChangeField("procedure_date", event.target.value)}
+            />
+          </span>
+        </label>
       </div>
 
       {editing && (
@@ -85,35 +135,6 @@ export default function ReviewStep({
             <span>병원</span>
             <input value={document.hospital_name} placeholder="확인 필요" onChange={(event) => onChangeField("hospital_name", event.target.value)} />
           </label>
-          <label className="reviewField">
-            <span>📅 검사 날짜 선택</span>
-            <input
-              type="date"
-              value={dateInputValue(document.procedure_date)}
-              onChange={(event) => onChangeField("procedure_date", event.target.value)}
-            />
-          </label>
-
-          <fieldset className="timeChoices">
-            <legend>검사는 언제예요?</legend>
-            <button type="button" aria-pressed={period === "morning" && !exactTimeMode} onClick={() => { setExactTimeMode(false); onChangeAppointment("morning"); }}>오전</button>
-            <button type="button" aria-pressed={period === "afternoon" && !exactTimeMode} onClick={() => { setExactTimeMode(false); onChangeAppointment("afternoon"); }}>오후</button>
-            <button type="button" aria-pressed={period === "unknown" && !exactTimeMode} onClick={() => { setExactTimeMode(false); onChangeAppointment("unknown"); }}>잘 모르겠어요</button>
-            <button type="button" aria-pressed={exactTimeMode} onClick={() => setExactTimeMode(true)}>정확한 시간</button>
-          </fieldset>
-          {exactTimeMode && (
-            <label className="reviewField">
-              <span>⏰ 시간 선택</span>
-              <input
-                type="time"
-                value={/^\d{2}:\d{2}$/.test(document.appointment_time) ? document.appointment_time : ""}
-                onChange={(event) => {
-                  const hour = Number(event.target.value.split(":")[0]);
-                  onChangeAppointment(hour < 12 ? "morning" : "afternoon", event.target.value);
-                }}
-              />
-            </label>
-          )}
           <button className="secondaryAction" type="button" onClick={() => setEditing(false)}>수정 완료</button>
         </div>
       )}
