@@ -115,6 +115,7 @@ export interface GuidePage {
   personalized: boolean;
   personalized_by?: string[];
   personalization_note?: string;
+  activation?: { question_id: string; values: string[] };
 }
 
 export interface HospitalConfirmation {
@@ -135,6 +136,7 @@ export interface FinalGuideResult {
   };
   user_profile_summary: Array<{ label: string; value: string }>;
   applied_answers: AppliedAnswer[];
+  personalization_questions: PersonalizationQuestion[];
   pages: GuidePage[];
   hospital_confirmation: HospitalConfirmation[];
   warnings: string[];
