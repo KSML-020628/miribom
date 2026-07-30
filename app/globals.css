@@ -368,7 +368,9 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 }
 .inlineTimeInput { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
 .inlineTimeInput span { color: var(--ink); font-size: .9rem; font-weight: 800; }
-.inlineTimeInput input,
+.timeSelect { min-width: 0; display: flex; align-items: center; gap: 6px; }
+.timeSelect span { color: var(--muted); font-weight: 900; }
+.timeSelect select,
 .reviewDatePicker input {
   min-width: 0;
   min-height: 52px;
@@ -381,6 +383,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   font-weight: 900;
   cursor: pointer;
 }
+.timeSelect select { flex: 1; }
 .reviewDatePicker { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, .7fr); align-items: center; gap: 12px; }
 .reviewEditPanel { width: min(760px, 100%); display: grid; gap: 14px; margin: 0 auto 24px; padding: 24px; background: var(--paper); border: 3px solid var(--line); border-radius: 16px; }
 .reviewEditPanel h2 { margin: 0 0 4px; font-size: var(--font-card-title); }
@@ -554,6 +557,21 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .guideSections { display: grid; gap: 52px; margin-top: 48px; }
 .guideSection { scroll-margin-top: 100px; }
 .guideSection > h2 { margin: 0 0 22px; padding-bottom: 14px; color: var(--ink); border-bottom: 4px solid var(--ink); font-size: clamp(1.8rem, 4vw, 2.35rem); letter-spacing: -.04em; }
+.guideStageToggle summary {
+  padding: 16px 20px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 3px solid var(--line);
+  border-radius: 14px;
+  font-size: var(--font-body);
+  font-weight: 900;
+  list-style: none;
+  cursor: pointer;
+}
+.guideStageToggle summary::-webkit-details-marker { display: none; }
+.guideStageToggle summary::after { content: "▾"; float: right; }
+.guideStageToggle[open] summary::after { content: "▴"; }
+.guideStageToggle > .guideSection { margin-top: 28px; }
 .guideInstructionList { display: grid; gap: 24px; }
 .guideInstruction {
   padding: 28px;
@@ -624,18 +642,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 }
 .personalizeQuestion legend { padding: 0; color: var(--ink); font-size: 1.55rem; line-height: 1.35; font-weight: 950; }
 .personalizeQuestion > p { margin: 8px 0 14px; color: var(--ink); font-size: var(--font-body); font-weight: 700; }
-.personalizeListen {
-  min-height: 44px;
-  margin-bottom: 14px;
-  padding: 0 16px;
-  color: var(--blue-dark);
-  background: var(--paper);
-  border: 2px solid var(--blue);
-  border-radius: 8px;
-  font-weight: 900;
-  cursor: pointer;
-}
-.personalizeChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.personalizeChoices { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 12px; }
 .personalizeChoices button {
   min-height: 72px;
   padding: 10px;
@@ -1193,13 +1200,12 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     text-rendering: optimizeLegibility;
   }
 
-  /* 숫자와 시간은 Geist Mono, 긴 한글 문장은 Pretendard로 표시 */
+  /* 짧은 숫자 칩만 Geist Mono를 쓰고, 나머지 문장은 모두 Pretendard로 통일한다.
+     (안내 대상 이름처럼 한글 텍스트가 섞이면 Geist Mono에 없는 글자만 Pretendard로
+     대체되어 같은 줄에서 글씨체가 서로 달라 보이는 문제가 있었다.) */
   .instructionTime,
   .questionProgress strong,
-  .loadingProgressMeta b,
-  .guideDocumentHeader dd,
-  .reviewField strong,
-  .previewMeta b {
+  .loadingProgressMeta b {
     font-family: var(--font-geist-mono), "Pretendard Variable", Pretendard, monospace;
     font-variant-numeric: tabular-nums;
     letter-spacing: -.025em;
@@ -1946,7 +1952,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   }
 
   .inlineTimeChoices button,
-  .inlineTimeInput input,
+  .timeSelect select,
   .reviewDatePicker input {
     min-height: 48px;
     color: var(--app-text-dark);
@@ -1960,6 +1966,11 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .timeSelect select {
+    min-width: 0;
+    flex: 1;
   }
 
   .reviewActions {
@@ -2111,13 +2122,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     border-radius: 999px;
   }
 
-  .personalizeListen {
-    color: var(--app-text-blue);
-    background: var(--app-yellow);
-    border: 0;
-    border-radius: 999px;
-  }
-
   .personalizeQuestion {
     padding: 18px 14px;
     color: var(--app-text-dark);
@@ -2132,28 +2136,36 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     font-size: 1.32rem;
   }
 
+  /* 선택지는 손으로 눌러 고르는 알약 버튼처럼 색을 꽉 채워서 보여준다. */
   .personalizeChoices {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+    gap: 10px;
   }
 
   .personalizeChoices button {
-    min-height: 64px;
+    min-height: 68px;
     padding: 8px 4px;
-    color: var(--app-text-dark);
-    background: #fff;
-    border: 3px solid #cbd5e1;
-    border-radius: 14px;
+    color: var(--app-text-blue);
+    background: var(--app-yellow);
+    border: 0;
+    border-radius: 999px;
+    box-shadow: 0 3px 0 rgba(16, 36, 63, .18);
+    transition: transform .1s ease, box-shadow .1s ease;
+  }
+
+  .personalizeChoices button:active {
+    box-shadow: none;
+    transform: translateY(3px);
   }
 
   .personalizeChoices button[data-tone="positive"] {
-    color: #075e35;
-    border-color: var(--app-success);
+    color: #fff;
+    background: var(--app-success);
   }
 
   .personalizeChoices button[data-tone="negative"] {
-    color: #a51f1f;
-    border-color: var(--app-danger);
+    color: #fff;
+    background: var(--app-danger);
   }
 
   .guideKeySummary,
@@ -2182,6 +2194,13 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 
   .guideSection {
     margin-top: 28px;
+  }
+
+  .guideStageToggle summary {
+    color: var(--app-white);
+    background: rgba(255, 255, 255, .14);
+    border: 2px solid rgba(255, 255, 255, .55);
+    border-radius: 999px;
   }
 
   .guideSection > h2 {
@@ -2227,6 +2246,27 @@ button:disabled { opacity: .42; cursor: not-allowed; }
     background: rgba(230, 235, 255, .9);
     border: 0;
     border-radius: 50%;
+  }
+
+  /* 작은 원형 아이콘 안에서는 그림 대신 쓰는 글자 라벨이 원 밖으로 넘치지 않도록 줄인다. */
+  .instructionContent .pictureCard .picturePlaceholder {
+    gap: 2px;
+    padding: 8px;
+  }
+
+  .instructionContent .pictureCard .picturePlaceholder strong {
+    font-size: 2rem;
+  }
+
+  .instructionContent .pictureCard .picturePlaceholder span {
+    display: -webkit-box;
+    overflow: hidden;
+    max-width: 100%;
+    font-size: .6rem;
+    line-height: 1.15;
+    text-align: center;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   .instructionCopy h3 {
@@ -2339,6 +2379,14 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .instructionContent .pictureCard {
     width: 76px;
     height: 76px;
+  }
+
+  .instructionContent .pictureCard .picturePlaceholder strong {
+    font-size: 1.6rem;
+  }
+
+  .instructionContent .pictureCard .picturePlaceholder span {
+    font-size: .52rem;
   }
 }
 

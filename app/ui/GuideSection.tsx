@@ -7,10 +7,9 @@ interface Props {
   title: string;
   items: SectionItem[];
   onAnswer: (questionId: string, value: string) => void;
-  onSpeak: (text: string) => void;
 }
 
-export default function GuideSection({ id, title, items, onAnswer, onSpeak }: Props) {
+export default function GuideSection({ id, title, items, onAnswer }: Props) {
   return (
     <section className="guideSection" id={id} aria-labelledby={`${id}-heading`}>
       <h2 id={`${id}-heading`}>{title}</h2>
@@ -22,7 +21,6 @@ export default function GuideSection({ id, title, items, onAnswer, onSpeak }: Pr
               key={`question-${item.question.question_id}`}
               question={item.question}
               onAnswer={onAnswer}
-              onSpeak={onSpeak}
             />
           ))}
       </div>

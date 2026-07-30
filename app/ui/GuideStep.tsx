@@ -5,6 +5,7 @@ import {
   visibleConfirmations,
   visiblePages,
 } from "@/app/lib/guide-visibility";
+import { daysUntil, partitionSectionsByTiming } from "@/app/lib/stage-order";
 import type { FinalGuideResult, ParsedPage } from "@/app/lib/types";
 import EasyReadPrintDocument from "./EasyReadPrintDocument";
 import GuideAnswerSummary from "./GuideAnswerSummary";
@@ -77,6 +78,11 @@ export default function GuideStep({
     }))
     .filter((group) => group.items.length > 0);
 
+  // 오늘 날짜와 검사일을 비교해, 지금 볼 필요가 있는 단계만 먼저 펼쳐 보여주고
+  // 아직 먼 단계는 "나머지 안내 보기"로 접어 둔다. 날짜를 모르면 전부 그대로 보여준다.
+  const daysUntilProcedure = daysUntil(guide.project.procedure_date);
+  const { visible: visibleGroups, collapsed: collapsedGroups } = partitionSectionsByTiming(groups, daysUntilProcedure);
+
   const orphanQuestions = guide.personalization_questions.filter(
     (question) => !answers[question.question_id] && !placedQuestionIds.has(question.question_id),
   );
@@ -92,7 +98,10 @@ export default function GuideStep({
   const keyActions = shownPages.filter((page) => page.section !== "표지").slice(0, 3);
 
   function moveToSection(id: string) {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const target = document.getElementById(id);
+    const details = target?.closest("details");
+    if (details && !details.open) details.open = true;
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function editAnswer(questionId: string) {
@@ -172,19 +181,31 @@ export default function GuideStep({
               title="확인이 필요한 질문"
               items={orphanQuestions.map((question) => ({ kind: "question" as const, question }))}
               onAnswer={onAnswer}
-              onSpeak={onSpeak}
             />
           )}
-          {groups.map((group) => (
+          {visibleGroups.map((group) => (
             <GuideSection
               key={group.id}
               id={group.id}
               title={group.title}
               items={group.items}
               onAnswer={onAnswer}
-              onSpeak={onSpeak}
             />
           ))}
+          {collapsedGroups.length > 0 && (
+            <details className="guideStageToggle interactiveOnly">
+              <summary>나머지 안내 보기 ({collapsedGroups.length}개)</summary>
+              {collapsedGroups.map((group) => (
+                <GuideSection
+                  key={group.id}
+                  id={group.id}
+                  title={group.title}
+                  items={group.items}
+                  onAnswer={onAnswer}
+                />
+              ))}
+            </details>
+          )}
         </div>
 
         {shownConfirmations.length > 0 && (

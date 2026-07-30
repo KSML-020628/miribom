@@ -89,8 +89,10 @@ function fixedTemplate(instruction: ExtractedInstruction): { title: string; body
       const subject = isWater
         ? `물${amount ? ` ${amount}` : ""}`
         : [instruction.object || "장을 비우는 약", amount].filter(Boolean).join(" ");
+      // "복용법"·"복용량"처럼 뒤에 다른 말이 붙는 복합 명사는 그대로 두고,
+      // "복용합니다/복용하세요"처럼 동사로 끝나는 경우만 쉬운 말로 바꾼다.
       const easyMethod = instruction.method
-        .replace(/복용(?:합니다|하세요)?/g, "드세요")
+        .replace(/복용\s*(?:합니다|하세요|해요)/g, "드세요")
         .replace(/마십니다/g, "마시세요");
       const methodRepeatsDuration = Boolean(instruction.duration)
         && /^(?:천천히\s*)?(?:마시세요|드세요)\.?$/.test(easyMethod.trim());

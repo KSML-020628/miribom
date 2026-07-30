@@ -21,11 +21,13 @@ assert.doesNotMatch(pageSource, /고대비/);
 
 const reviewSource = read("app/ui/ReviewStep.tsx");
 assert.match(reviewSource, /type="date"/);
-assert.match(reviewSource, /type="time"/);
+assert.doesNotMatch(reviewSource, /type="time"/);
+assert.match(reviewSource, /className="timeSelect"/);
+assert.match(reviewSource, /24시간/);
 assert.match(reviewSource, /잘 모르겠어요/);
 const alwaysVisibleReview = reviewSource.split("{editing &&")[0];
 assert.match(alwaysVisibleReview, /type="date"/);
-assert.match(alwaysVisibleReview, /type="time"/);
+assert.match(alwaysVisibleReview, /className="timeSelect"/);
 assert.match(alwaysVisibleReview, /검사 날짜 바로 선택/);
 
 const guideSource = read("app/ui/GuideStep.tsx");

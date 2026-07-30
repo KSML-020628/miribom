@@ -12,7 +12,8 @@
     "test:ui-flow": "node tests/vertical-flow.test.mjs",
     "test:visibility": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/guide-visibility.test.mjs",
     "test:generator": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/guide-generator.test.mjs",
-    "test": "npm run test:merge && npm run test:accessibility && npm run test:ui-flow && npm run test:visibility && npm run test:generator"
+    "test:timing": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/guide-timing.test.mjs",
+    "test": "npm run test:merge && npm run test:accessibility && npm run test:ui-flow && npm run test:visibility && npm run test:generator && npm run test:timing"
   },
   "dependencies": {
     "geist": "^1.7.2",

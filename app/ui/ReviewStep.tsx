@@ -24,6 +24,9 @@ function dateInputValue(value: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value.trim()) ? value.trim() : "";
 }
 
+const HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
+const MINUTES = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0"));
+
 function koreanDate(value: string): string {
   const normalized = dateInputValue(value);
   if (!normalized) return value || "확인 필요";
@@ -96,17 +99,38 @@ export default function ReviewStep({
             >
               잘 모르겠어요
             </button>
-            <label className="inlineTimeInput">
-              <span>정확한 시간</span>
-              <input
-                type="time"
-                value={exactTime}
-                onChange={(event) => {
-                  const hour = Number(event.target.value.split(":")[0]);
-                  onChangeAppointment(hour < 12 ? "morning" : "afternoon", event.target.value);
-                }}
-              />
-            </label>
+            <div className="inlineTimeInput">
+              <span>정확한 시간 (24시간)</span>
+              <div className="timeSelect">
+                <select
+                  aria-label="검사 시간 - 시"
+                  value={exactTime ? exactTime.split(":")[0] : ""}
+                  onChange={(event) => {
+                    const hour = event.target.value;
+                    const minute = exactTime ? exactTime.split(":")[1] : "00";
+                    const next = `${hour}:${minute}`;
+                    onChangeAppointment(Number(hour) < 12 ? "morning" : "afternoon", next);
+                  }}
+                >
+                  <option value="" disabled>시</option>
+                  {HOURS.map((hour) => <option key={hour} value={hour}>{Number(hour)}시</option>)}
+                </select>
+                <span aria-hidden="true">:</span>
+                <select
+                  aria-label="검사 시간 - 분"
+                  value={exactTime ? exactTime.split(":")[1] : ""}
+                  onChange={(event) => {
+                    const minute = event.target.value;
+                    const hour = exactTime ? exactTime.split(":")[0] : "00";
+                    const next = `${hour}:${minute}`;
+                    onChangeAppointment(Number(hour) < 12 ? "morning" : "afternoon", next);
+                  }}
+                >
+                  <option value="" disabled>분</option>
+                  {MINUTES.map((minute) => <option key={minute} value={minute}>{minute}분</option>)}
+                </select>
+              </div>
+            </div>
           </fieldset>
         </div>
         {regimen && <p><span>장 청소약</span><strong>{regimen}</strong></p>}
