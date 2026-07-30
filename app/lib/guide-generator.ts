@@ -17,11 +17,20 @@ const STAGE_ORDER: Record<string, number> = {
   "검사 후": 50,
 };
 
+// 이 안내문이 켜지는 답의 값 목록을 계산한다.
+function activatingValues(instruction: ExtractedInstruction): string[] {
+  if (instruction.condition_id === "BLOOD_THINNER_COUNT") {
+    return instruction.condition_value ? [instruction.condition_value] : ["one", "two_or_more"];
+  }
+  return [instruction.condition_value || "yes"];
+}
+
 function questionForCondition(instruction: ExtractedInstruction, questions: PersonalizationQuestion[]): PersonalizationQuestion | undefined {
   const template = QUESTION_CATALOG[instruction.condition_id];
   return template ? questions.find((question) => question.question_id === template.question_id) : undefined;
 }
 
+// NOTE: 신규 인라인 개인화 모델에서는 사용하지 않음. 향후 confirm 세분화 시 재사용 가능.
 function answerApplies(instruction: ExtractedInstruction, answer: string | undefined): "include" | "exclude" | "confirm" {
   if (!instruction.source_verified) return "exclude";
   if (instruction.applicability === "all" || instruction.condition_id === "NO_CONDITION") return "include";
@@ -116,18 +125,13 @@ export async function buildFinalGuide(
   document: DocumentSummary,
   questions: PersonalizationQuestion[],
   instructions: ExtractedInstruction[],
-  answers: Record<string, string>,
+  _answers: Record<string, string>,
 ): Promise<FinalGuideResult> {
-  const selected: ExtractedInstruction[] = [];
-  const confirmations: ExtractedInstruction[] = [];
-  for (const instruction of instructions) {
-    const question = questionForCondition(instruction, questions);
-    const decision = answerApplies(instruction, question ? answers[question.question_id] : undefined);
-    if (decision === "include") selected.push(instruction);
-    if (decision === "confirm") confirmations.push(instruction);
-  }
+  // 답으로 사전 필터링하지 않는다. 검증된 안내문은 모두 페이지로 만들고,
+  // 조건부 안내문에는 activation을 붙여 화면에서 실시간으로 걸러지게 한다.
+  const included = instructions.filter((instruction) => instruction.source_verified);
 
-  const ordered = selected.sort((left, right) =>
+  const ordered = included.sort((left, right) =>
     (STAGE_ORDER[left.when_stage] ?? 99) - (STAGE_ORDER[right.when_stage] ?? 99) ||
     ACTION_SORT_ORDER[left.action_id] - ACTION_SORT_ORDER[right.action_id],
   );
@@ -164,6 +168,12 @@ export async function buildFinalGuide(
       title,
       template?.body || (easy ? [] : ["정확한 내용은 병원에 확인해 주세요."]),
     );
+    const isConditional = instruction.applicability !== "all" && instruction.condition_id !== "NO_CONDITION";
+    // 조건부이면서 매칭되는 질문이 있을 때만 activation을 붙인다.
+    // 질문이 없으면 개인화할 방법이 없으므로 공통 안내로 항상 보여준다(안전).
+    const activation = isConditional && question
+      ? { question_id: question.question_id, values: activatingValues(instruction) }
+      : undefined;
     return {
       page_number: index + 2,
       section: sectionFor(instruction),
@@ -172,17 +182,17 @@ export async function buildFinalGuide(
       body,
       image_tag: ACTION_IMAGE_TAGS[instruction.action_id],
       importance: instruction.importance,
-      personalized: instruction.applicability !== "all",
+      personalized: Boolean(activation),
       personalized_by: question ? [question.question_id] : [],
       personalization_note: question ? personalizationNote(instruction) : "",
+      activation,
     };
   });
 
-  const summary = questions.map((question) => {
-    const answer = answers[question.question_id] || "unknown";
-    const option = question.options.find((item) => item.value === answer);
-    return { label: question.question.replace(/[?？]/g, ""), value: option?.label || "잘 모르겠어요" };
-  });
+  const summary = questions.map((question) => ({
+    label: question.question.replace(/[?？]/g, ""),
+    value: "화면에서 답한 내용에 맞춰요",
+  }));
 
   return {
     mode: "final_guide",
@@ -195,17 +205,16 @@ export async function buildFinalGuide(
       created_at: new Date().toISOString().slice(0, 10),
     },
     user_profile_summary: summary,
-    applied_answers: summary.map((item, index) => ({
-      question_id: questions[index]?.question_id || "",
-      answer: item.value,
-      effect_on_instructions: "원문에서 이 답에 해당하는 안내만 선택했어요.",
-    })),
-    pages: [cover, ...pages].slice(0, 18),
-    hospital_confirmation: confirmations.map((instruction) => ({
-      title: "병원에 확인해 주세요",
-      body: instruction.source_text,
-      image_tag: "ASK_DOCTOR",
-    })),
+    applied_answers: [],
+    personalization_questions: questions,
+    pages: [cover, ...pages].slice(0, 24),
+    hospital_confirmation: included
+      .filter((instruction) => instruction.applicability === "confirm_with_hospital")
+      .map((instruction) => ({
+        title: "병원에 확인해 주세요",
+        body: instruction.source_text,
+        image_tag: "ASK_DOCTOR",
+      })),
     warnings: instructions.some((instruction) => !instruction.source_verified)
       ? ["원문 근거를 확인하지 못한 항목은 안내서에서 제외했어요."]
       : [],
