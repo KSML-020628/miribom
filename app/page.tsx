@@ -12,8 +12,6 @@ import type {
 } from "./lib/types";
 import GuideStep from "./ui/GuideStep";
 import ProgressHeader from "./ui/ProgressHeader";
-import QuestionStep from "./ui/QuestionStep";
-import ReviewStep from "./ui/ReviewStep";
 import UploadStep, { type UploadFile } from "./ui/UploadStep";
 
 type FontSize = "normal" | "large" | "xlarge";
@@ -30,9 +28,8 @@ export default function Home() {
   const filesRef = useRef<UploadFile[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [sourceContent, setSourceContent] = useState("");
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [questionIndex, setQuestionIndex] = useState(0);
   const [guide, setGuide] = useState<FinalGuideResult | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [pageIndex, setPageIndex] = useState(0);
   const [overview, setOverview] = useState(false);
   const [stage, setStage] = useState<ProcessingStage>("idle");
@@ -44,8 +41,16 @@ export default function Home() {
   useEffect(() => { filesRef.current = files; }, [files]);
   useEffect(() => () => filesRef.current.forEach((item) => item.preview && URL.revokeObjectURL(item.preview)), []);
   useEffect(() => {
+    const savedFont = window.localStorage.getItem("miribom.fontSize");
+    const savedContrast = window.localStorage.getItem("miribom.contrast");
+    if (savedFont === "normal" || savedFont === "large" || savedFont === "xlarge") setFontSize(savedFont);
+    if (savedContrast === "high") setHighContrast(true);
+  }, []);
+  useEffect(() => {
     document.documentElement.dataset.fontSize = fontSize;
     document.documentElement.dataset.contrast = highContrast ? "high" : "normal";
+    window.localStorage.setItem("miribom.fontSize", fontSize);
+    window.localStorage.setItem("miribom.contrast", highContrast ? "high" : "normal");
   }, [fontSize, highContrast]);
   useEffect(() => {
     const progressConfig = {
@@ -133,33 +138,20 @@ export default function Home() {
       const nextAnalysis = await analyzeResponse.json() as AnalysisResult;
       setAnalysis(nextAnalysis);
       setAnswers({});
-      setQuestionIndex(0);
-      await finishLoadingProgress();
-      setStage("done");
-      setStep("review");
-    } catch (caught) {
-      setStage("error");
-      setError(caught instanceof Error ? caught.message : "안내문을 읽지 못했어요. 다시 찍어 주세요.");
-    }
-  }
 
-  async function generateGuide(nextAnswers = answers) {
-    if (!analysis) return;
-    setStage("generating");
-    setError("");
-    try {
-      const response = await fetch("/api/finalize", {
+      setStage("generating");
+      const finalizeResponse = await fetch("/api/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          document: analysis.document,
-          questions: analysis.personalization_questions,
-          instructions: analysis.instructions,
-          answers: nextAnswers,
+          document: nextAnalysis.document,
+          questions: nextAnalysis.personalization_questions,
+          instructions: nextAnalysis.instructions,
+          answers: {},
         }),
       });
-      if (!response.ok) throw new Error(await readError(response));
-      const result = await response.json() as FinalGuideResult;
+      if (!finalizeResponse.ok) throw new Error(await readError(finalizeResponse));
+      const result = await finalizeResponse.json() as FinalGuideResult;
       setGuide(result);
       setPageIndex(0);
       setOverview(false);
@@ -168,35 +160,8 @@ export default function Home() {
       setStep("guide");
     } catch (caught) {
       setStage("error");
-      setError(caught instanceof Error ? caught.message : "맞춤 안내서를 만들지 못했어요.");
+      setError(caught instanceof Error ? caught.message : "안내문을 읽지 못했어요. 다시 찍어 주세요.");
     }
-  }
-
-  function startQuestions() {
-    if (!analysis) return;
-    if (!analysis.personalization_questions.length) {
-      void generateGuide({});
-      return;
-    }
-    setQuestionIndex(0);
-    setStep("questions");
-  }
-
-  function answerQuestion(value: string) {
-    if (!analysis) return;
-    const question = analysis.personalization_questions[questionIndex];
-    const nextAnswers = { ...answers, [question.question_id]: value };
-    setAnswers(nextAnswers);
-    if (questionIndex === analysis.personalization_questions.length - 1) {
-      void generateGuide(nextAnswers);
-    } else {
-      setQuestionIndex((current) => current + 1);
-    }
-  }
-
-  function backQuestion() {
-    if (questionIndex === 0) setStep("review");
-    else setQuestionIndex((current) => current - 1);
   }
 
   function speak(text: string) {
@@ -237,9 +202,19 @@ export default function Home() {
     setStep("upload");
   }
 
+  function setAnswer(questionId: string, value: string) {
+    setAnswers((current) => ({ ...current, [questionId]: value }));
+  }
+
+  function changeDocumentField(
+    field: "procedure_name" | "hospital_name" | "procedure_date" | "appointment_time",
+    value: string,
+  ) {
+    setGuide((current) => current ? { ...current, project: { ...current.project, [field]: value } } : current);
+  }
+
   const processing = stage === "parsing" || stage === "analyzing" || stage === "generating";
   const activeProcessing = processing ? PROCESSING_COPY[stage] : null;
-  const currentQuestion = analysis?.personalization_questions[questionIndex];
 
   return (
     <main className="appShell">
@@ -261,39 +236,22 @@ export default function Home() {
 
       <div className="mainViewport">
         {step === "upload" && <UploadStep files={files} busy={processing} onAdd={addFiles} onRemove={removeFile} onMove={moveFile} onAnalyze={analyze} />}
-        {step === "review" && analysis && (
-          <ReviewStep
-            analysis={analysis}
-            onChangeField={(field, value) => setAnalysis({ ...analysis, document: { ...analysis.document, [field]: value } })}
-            onConfirm={startQuestions}
-            onBack={() => setStep("upload")}
-            onListen={() => speak(`${analysis.document.procedure_name} 안내문으로 확인했어요. 이 안내문이 맞나요?`)}
-          />
-        )}
-        {step === "questions" && currentQuestion && (
-          <QuestionStep
-            question={currentQuestion}
-            index={questionIndex}
-            total={analysis.personalization_questions.length}
-            selected={answers[currentQuestion.question_id]}
-            onAnswer={answerQuestion}
-            onBack={backQuestion}
-            onListen={() => speak(`${currentQuestion.question}. ${currentQuestion.helper_text}. ${currentQuestion.options.map((option) => option.label).join(", ")}`)}
-          />
-        )}
         {step === "guide" && guide && (
           <GuideStep
             guide={guide}
+            answers={answers}
             pageIndex={pageIndex}
             overview={overview}
+            onAnswer={setAnswer}
+            onChangeField={changeDocumentField}
             onPage={setPageIndex}
             onOverview={() => setOverview((value) => !value)}
             onListenPage={speakPage}
             onListenAll={speakAll}
-            onEditAnswers={() => { setQuestionIndex(0); setStep("questions"); }}
             onRestart={restart}
             onPrint={() => window.print()}
             documentText={sourceContent}
+            hospitalPhone={analysis?.document.hospital_phone ?? ""}
             onSpeak={speak}
           />
         )}
