@@ -15,7 +15,6 @@ interface Props {
   answers: Record<string, string>;
   onAnswer: (questionId: string, value: string) => void;
   onListenAll: () => void;
-  onEditAnswers: () => void;
   onRestart: () => void;
   onPrint: () => void;
   documentPages: ParsedPage[];
@@ -50,7 +49,6 @@ export default function GuideStep({
   answers,
   onAnswer,
   onListenAll,
-  onEditAnswers,
   onRestart,
   onPrint,
   documentPages,
@@ -157,7 +155,6 @@ export default function GuideStep({
 
       <div className="guideBottomActions interactiveOnly">
         <GuideChat guide={shownGuide} documentPages={documentPages} onSpeak={onSpeak} speaking={speaking} onStopSpeak={onStopSpeaking} />
-        <button type="button" onClick={onEditAnswers}>답변 다시 보기</button>
         <button type="button" onClick={onRestart}>새 안내문 만들기</button>
       </div>
 

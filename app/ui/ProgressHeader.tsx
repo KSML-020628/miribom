@@ -5,7 +5,6 @@ import type { AppStep } from "@/app/lib/types";
 const STEPS = [
   { key: "UPLOAD_REVIEW", label: "사진 확인" },
   { key: "DOCUMENT_REVIEW", label: "내용 확인" },
-  { key: "QUESTIONS", label: "맞춤 질문" },
   { key: "GUIDE", label: "쉬운 안내서" },
 ] as const;
 
@@ -14,8 +13,7 @@ const STEP_INDEX: Record<AppStep, number> = {
   UPLOAD_REVIEW: 0,
   ANALYZING: 0,
   DOCUMENT_REVIEW: 1,
-  QUESTIONS: 2,
-  GUIDE: 3,
+  GUIDE: 2,
 };
 
 interface Props {

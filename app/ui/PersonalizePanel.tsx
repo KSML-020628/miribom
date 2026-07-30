@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function PersonalizePanel({ questions, answers, onAnswer, onSpeak }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => questions.some((question) => !answers[question.question_id]));
   if (!questions.length) return null;
 
   const answeredCount = questions.filter((question) => answers[question.question_id]).length;
@@ -71,6 +71,16 @@ export default function PersonalizePanel({ questions, answers, onAnswer, onSpeak
                     </button>
                   ))}
                 </div>
+                {!selected && (
+                  <p className="personalizeUnanswered" role="status">
+                    아직 안 골랐어요. 답을 고르면 관련 안내가 바로 나타나요.
+                  </p>
+                )}
+                {selected && selected !== "unknown" && (
+                  <p className="personalizeFeedback" role="status">
+                    선택한 답에 맞게 아래 안내를 바꿨어요.
+                  </p>
+                )}
                 {selected === "unknown" && (
                   <p className="personalizeUnknown" role="status">
                     이 내용은 추측하지 않고 병원 확인 항목에 넣었어요.

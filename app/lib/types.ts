@@ -333,7 +333,6 @@ export type AppStep =
   | "UPLOAD_REVIEW"
   | "ANALYZING"
   | "DOCUMENT_REVIEW"
-  | "QUESTIONS"
   | "GUIDE";
 export type ProcessingStage = "idle" | "parsing" | "analyzing" | "generating" | "done" | "error";
 

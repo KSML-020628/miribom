@@ -17,7 +17,6 @@ import { visiblePages } from "./lib/guide-visibility";
 import GuideStep from "./ui/GuideStep";
 import HomeUploadStep, { type UploadFile } from "./ui/HomeUploadStep";
 import ProgressHeader from "./ui/ProgressHeader";
-import QuestionStep from "./ui/QuestionStep";
 import ReviewStep from "./ui/ReviewStep";
 import UploadPreviewStep from "./ui/UploadPreviewStep";
 
@@ -26,7 +25,7 @@ type FontSize = "normal" | "large" | "xlarge";
 const PROCESSING_COPY: Record<Exclude<ProcessingStage, "idle" | "done" | "error">, { title: string; detail: string }> = {
   parsing: { title: "안내문의 글자를 읽고 있어요", detail: "사진이 여러 장이면 차례대로 읽어요." },
   analyzing: { title: "맞춤 질문을 만들고 있어요", detail: "사람마다 달라지는 준비 내용을 찾고 있어요." },
-  generating: { title: "나만의 안내서를 만들고 있어요", detail: "내 답변에 맞는 원문만 골라 쉬운 말로 바꾸고 있어요." },
+  generating: { title: "쉬운 안내서를 만들고 있어요", detail: "질문에 따라 달라질 안내도 함께 준비하고 있어요." },
 };
 
 export default function Home() {
@@ -38,7 +37,6 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [sourcePages, setSourcePages] = useState<ParsedPage[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [questionIndex, setQuestionIndex] = useState(0);
   const [guide, setGuide] = useState<FinalGuideResult | null>(null);
   const [stage, setStage] = useState<ProcessingStage>("idle");
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -73,7 +71,7 @@ export default function Home() {
       document.querySelector<HTMLElement>("[data-screen-title]")?.focus();
     }, 30);
     return () => window.clearTimeout(timer);
-  }, [step, questionIndex]);
+  }, [step]);
   useEffect(() => {
     const progressConfig = {
       parsing: { start: 6, ceiling: 76 },
@@ -179,7 +177,6 @@ export default function Home() {
       const nextAnalysis = await analyzeResponse.json() as AnalysisResult;
       setAnalysis(nextAnalysis);
       setAnswers({});
-      setQuestionIndex(0);
       await finishLoadingProgress();
       setStage("done");
       setStep("DOCUMENT_REVIEW");
@@ -193,11 +190,11 @@ export default function Home() {
     }
   }
 
-  async function generateGuide(nextAnswers = answers) {
+  async function generateGuide() {
     if (!analysis) return;
     setStage("generating");
     setError("");
-    processingReturnStepRef.current = analysis.personalization_questions.length ? "QUESTIONS" : "DOCUMENT_REVIEW";
+    processingReturnStepRef.current = "DOCUMENT_REVIEW";
     setStep("ANALYZING");
     const controller = new AbortController();
     requestControllerRef.current = controller;
@@ -209,7 +206,7 @@ export default function Home() {
           document: analysis.document,
           questions: analysis.personalization_questions,
           instructions: analysis.instructions,
-          answers: nextAnswers,
+          answers: {},
           procedures: analysis.procedures,
           conflicts: analysis.conflicts,
         }),
@@ -229,33 +226,6 @@ export default function Home() {
     } finally {
       requestControllerRef.current = null;
     }
-  }
-
-  function startQuestions() {
-    if (!analysis) return;
-    if (!analysis.personalization_questions.length) {
-      void generateGuide({});
-      return;
-    }
-    setQuestionIndex(0);
-    setStep("QUESTIONS");
-  }
-
-  function answerQuestion(value: string) {
-    if (!analysis) return;
-    const question = analysis.personalization_questions[questionIndex];
-    const nextAnswers = { ...answers, [question.question_id]: value };
-    setAnswers(nextAnswers);
-    if (questionIndex === analysis.personalization_questions.length - 1) {
-      void generateGuide(nextAnswers);
-    } else {
-      setQuestionIndex((current) => current + 1);
-    }
-  }
-
-  function backQuestion() {
-    if (questionIndex === 0) setStep("DOCUMENT_REVIEW");
-    else setQuestionIndex((current) => current - 1);
   }
 
   function stopSpeaking() {
@@ -334,7 +304,6 @@ export default function Home() {
 
   const processing = stage === "parsing" || stage === "analyzing" || stage === "generating";
   const activeProcessing = processing ? PROCESSING_COPY[stage] : null;
-  const currentQuestion = analysis?.personalization_questions[questionIndex];
 
   return (
     <main className={`appShell step-${step.toLowerCase()}`}>
@@ -380,22 +349,10 @@ export default function Home() {
             analysis={analysis}
             onChangeField={(field, value) => setAnalysis({ ...analysis, document: { ...analysis.document, [field]: value } })}
             onChangeAppointment={changeAppointment}
-            onConfirm={startQuestions}
+            onConfirm={() => void generateGuide()}
             onBack={() => setStep("UPLOAD_REVIEW")}
             speaking={speaking}
             onListen={() => toggleSpeech(`${analysis.document.procedure_name} 안내문으로 확인했어요. 이 안내문이 맞나요?`)}
-          />
-        )}
-        {step === "QUESTIONS" && currentQuestion && (
-          <QuestionStep
-            question={currentQuestion}
-            index={questionIndex}
-            total={analysis.personalization_questions.length}
-            selected={answers[currentQuestion.question_id]}
-            onAnswer={answerQuestion}
-            onBack={backQuestion}
-            speaking={speaking}
-            onListen={() => toggleSpeech(`${currentQuestion.question}. ${currentQuestion.helper_text}. ${currentQuestion.options.map((option) => option.label).join(", ")}`)}
           />
         )}
         {step === "GUIDE" && guide && (
@@ -404,7 +361,6 @@ export default function Home() {
             answers={answers}
             onAnswer={updateGuideAnswer}
             onListenAll={speakAll}
-            onEditAnswers={() => { setQuestionIndex(0); setStep("QUESTIONS"); }}
             onRestart={restart}
             onPrint={() => window.print()}
             documentPages={sourcePages}

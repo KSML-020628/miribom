@@ -26,14 +26,9 @@ const page = read("app/page.tsx");
 assert.match(page, /setStep\("UPLOAD_REVIEW"\)/);
 assert.match(page, /setStep\("ANALYZING"\)/);
 assert.match(page, /setStep\("DOCUMENT_REVIEW"\)/);
-assert.match(page, /setStep\("QUESTIONS"\)/);
 assert.match(page, /setStep\("GUIDE"\)/);
-assert.match(page, /setQuestionIndex\(\(current\) => current \+ 1\)/);
-
-const question = read("app/ui/QuestionStep.tsx");
-assert.equal((question.match(/<h1/g) || []).length, 1);
-assert.match(question, /aria-label=\{speaking \? "읽기 멈추기" : "현재 질문 듣기"\}/);
-assert.match(question, /onBack/);
+assert.doesNotMatch(page, /QUESTIONS|QuestionStep|questionIndex|answerQuestion/);
+assert.match(page, /answers: \{\}/);
 
 const guide = read("app/ui/GuideStep.tsx");
 assert.match(guide, /groupGuidePages/);
@@ -42,6 +37,7 @@ assert.match(guide, /className="verticalGuideDocument screenOnly"/);
 assert.match(guide, /PDF 저장/);
 assert.match(guide, /EasyReadPrintDocument/);
 assert.match(guide, /visiblePages/);
+assert.match(guide, /PersonalizePanel/);
 assert.doesNotMatch(guide, /pageArrow|bookViewer|onPage|pageIndex|overview|carousel|currentSlide/);
 
 const instruction = read("app/ui/GuideInstructionBlock.tsx");
@@ -58,4 +54,4 @@ assert.match(css, /\.instructionContent \{ display: grid/);
 assert.match(css, /\.easyReadPrintPage\s*\{[\s\S]*?width: 210mm/);
 assert.match(css, /\.easyReadPrintContent\s*\{[\s\S]*?grid-template-columns: 64mm/);
 
-console.log("vertical UI flow fixtures: 37 passed");
+console.log("vertical UI flow fixtures: 36 passed");
