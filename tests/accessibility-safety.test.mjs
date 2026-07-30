@@ -25,12 +25,13 @@ assert.match(reviewSource, /type="time"/);
 assert.match(reviewSource, /잘 모르겠어요/);
 
 const guideSource = read("app/ui/GuideStep.tsx");
-assert.match(guideSource, /className="verticalGuideDocument"/);
+assert.match(guideSource, /className="verticalGuideDocument screenOnly"/);
 assert.match(guideSource, /speaking \? "멈추기" : "전체 듣기"/);
+assert.match(guideSource, /PersonalizePanel/);
 
 const css = read("app/globals.css");
 assert.match(css, /--font-time:/);
 assert.match(css, /\[data-contrast="high"\]/);
 assert.match(css, /--line: #000000/);
 
-console.log("accessibility and safety fixtures: 12 passed");
+console.log("accessibility and safety fixtures: 13 passed");

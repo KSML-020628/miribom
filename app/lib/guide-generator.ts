@@ -31,34 +31,20 @@ function questionForCondition(instruction: ExtractedInstruction, questions: Pers
     ));
 }
 
-function answerApplies(
+function activatingValues(
   instruction: ExtractedInstruction,
-  answer: string | undefined,
-  procedures: ProcedureGroup[],
-): "include" | "exclude" | "confirm" {
-  if (!instruction.source_verified) return "exclude";
-  if (instruction.superseded_by) return "exclude";
-  if (instruction.applicability === "all" || instruction.condition_id === "NO_CONDITION") return "include";
-  if (instruction.condition_id === "APPOINTMENT_PERIOD" && !answer) {
-    const resolved = procedures.find((procedure) => procedure.procedure_id === instruction.procedure_id)?.appointment_period;
-    if (resolved && resolved !== "unknown") {
-      return !instruction.condition_value || instruction.condition_value === resolved ? "include" : "exclude";
-    }
-  }
-  if (!answer || answer === "unknown") return "confirm";
-  if (instruction.condition_id === "BLOOD_THINNER_USE") {
-    if (answer === "no") return "exclude";
-    return "confirm";
-  }
-  if (instruction.condition_id === "BLOOD_THINNER_COUNT") {
-    if (answer === "none") return "exclude";
-    const expected = instruction.condition_value;
-    if (!expected || answer !== expected) return "exclude";
-    return instruction.applicability === "confirm_with_hospital" ? "confirm" : "include";
-  }
-  if (instruction.condition_id === "GUARDIAN_AVAILABLE" && answer === "no") return "confirm";
-  const expected = instruction.condition_value || "yes";
-  return answer === expected ? (instruction.applicability === "confirm_with_hospital" ? "confirm" : "include") : "exclude";
+  question: PersonalizationQuestion,
+): string[] {
+  const optionValues = question.options.map((option) => option.value);
+  const specified = instruction.condition_value;
+
+  // 원문에 "아니요일 때", "오전일 때"처럼 분기가 명시되면 그 값만 켠다.
+  if (specified && optionValues.includes(specified)) return [specified];
+
+  // 값이 비어 있을 때는 부정·모름을 제외한 선택에만 조건 안내를 켠다.
+  const nonActivating = new Set(["no", "none", "unknown"]);
+  const positiveValues = optionValues.filter((value) => !nonActivating.has(value));
+  return positiveValues.length ? positiveValues : optionValues.filter((value) => value !== "unknown");
 }
 
 function whenLabel(instruction: ExtractedInstruction): string {
@@ -177,21 +163,19 @@ export async function buildFinalGuide(
   procedures: ProcedureGroup[] = [],
   conflicts: InstructionConflict[] = [],
 ): Promise<FinalGuideResult> {
-  const selected: ExtractedInstruction[] = [];
-  const confirmations: ExtractedInstruction[] = [];
-  for (const instruction of instructions) {
+  // 답으로 미리 삭제하지 않는다. 원문 근거가 확인된 모든 분기를 만들어 두고,
+  // activation과 현재 답변으로 화면·PDF에서 즉시 표시 여부를 바꾼다.
+  const included = instructions.filter((instruction) => {
+    if (!instruction.source_verified || instruction.superseded_by) return false;
     if (
       instruction.action_id === "CHECK_TIME"
       && procedures.some((procedure) => (
         procedure.procedure_id === instruction.procedure_id
         && procedure.appointment_period !== "unknown"
       ))
-    ) continue;
-    const question = questionForCondition(instruction, questions);
-    const decision = answerApplies(instruction, question ? answers[question.question_id] : undefined, procedures);
-    if (decision === "include") selected.push(instruction);
-    if (decision === "confirm") confirmations.push(instruction);
-  }
+    ) return false;
+    return true;
+  });
 
   const timeOrder = (instruction: ExtractedInstruction) => {
     const match = instruction.when_time.match(/(오전|오후|아침|저녁|밤)?\s*(\d{1,2})(?::|\s*시\s*)?(\d{1,2})?/);
@@ -200,7 +184,7 @@ export async function buildFinalGuide(
     if ((match[1] === "오후" || match[1] === "저녁" || match[1] === "밤") && hour < 12) hour += 12;
     return hour * 60 + Number(match[3] || 0);
   };
-  const ordered = selected.sort((left, right) =>
+  const ordered = included.sort((left, right) =>
     (STAGE_ORDER[left.when_stage] ?? 99) - (STAGE_ORDER[right.when_stage] ?? 99) ||
     timeOrder(left) - timeOrder(right) ||
     ACTION_SORT_ORDER[left.action_id] - ACTION_SORT_ORDER[right.action_id],
@@ -243,6 +227,14 @@ export async function buildFinalGuide(
       title,
       template?.body || (easy ? [] : ["정확한 내용은 병원에 확인해 주세요."]),
     );
+    const isConditional = instruction.applicability !== "all"
+      && instruction.condition_id !== "NO_CONDITION";
+    const activation = isConditional && question
+      ? {
+          question_id: question.question_id,
+          values: activatingValues(instruction, question),
+        }
+      : undefined;
     return {
       page_number: index + 2,
       section: sectionFor(instruction),
@@ -251,7 +243,7 @@ export async function buildFinalGuide(
       body,
       image_tag: ACTION_IMAGE_TAGS[instruction.action_id],
       importance: instruction.importance,
-      personalized: instruction.applicability !== "all",
+      personalized: Boolean(activation),
       personalized_by: question
         ? [question.question_id]
         : resolvedAppointment && resolvedAppointment !== "unknown"
@@ -267,6 +259,7 @@ export async function buildFinalGuide(
       procedure_id: instruction.procedure_id,
       source_document_ids: instruction.source_document_ids,
       source_instruction_ids: [instruction.instruction_id],
+      activation,
     };
   });
 
@@ -292,12 +285,17 @@ export async function buildFinalGuide(
       answer: item.value,
       effect_on_instructions: "원문에서 이 답에 해당하는 안내만 선택했어요.",
     })),
+    personalization_questions: questions,
     pages: [cover, ...pages].slice(0, 30),
     hospital_confirmation: [
-      ...confirmations.map((instruction) => ({
-        title: "병원에 확인해 주세요",
-        body: instruction.source_text,
+      ...questions.map((question) => ({
+        title: "잘 모르는 내용은 병원에 물어보세요",
+        body: `${question.question.replace(/[?？]/g, "")} 내용을 병원에 확인해 주세요.`,
         image_tag: "ASK_DOCTOR",
+        activation: {
+          question_id: question.question_id,
+          values: ["unknown"],
+        },
       })),
       ...conflicts.map((conflict) => ({
         title: "안내문 내용이 서로 달라요",

@@ -38,8 +38,10 @@ assert.match(question, /onBack/);
 const guide = read("app/ui/GuideStep.tsx");
 assert.match(guide, /groupGuidePages/);
 assert.match(guide, /groups\.map/);
-assert.match(guide, /className="verticalGuideDocument"/);
+assert.match(guide, /className="verticalGuideDocument screenOnly"/);
 assert.match(guide, /PDF 저장/);
+assert.match(guide, /EasyReadPrintDocument/);
+assert.match(guide, /visiblePages/);
 assert.doesNotMatch(guide, /pageArrow|bookViewer|onPage|pageIndex|overview|carousel|currentSlide/);
 
 const instruction = read("app/ui/GuideInstructionBlock.tsx");
@@ -53,5 +55,7 @@ assert.match(css, /\.guideInstruction\s*\{[\s\S]*?break-inside: avoid/);
 assert.match(css, /@media \(max-width: 370px\)/);
 assert.match(css, /@media print[\s\S]*?\.interactiveOnly/);
 assert.match(css, /\.instructionContent \{ display: grid/);
+assert.match(css, /\.easyReadPrintPage\s*\{[\s\S]*?width: 210mm/);
+assert.match(css, /\.easyReadPrintContent\s*\{[\s\S]*?grid-template-columns: 64mm/);
 
-console.log("vertical UI flow fixtures: 33 passed");
+console.log("vertical UI flow fixtures: 37 passed");

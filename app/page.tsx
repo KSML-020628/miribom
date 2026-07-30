@@ -13,6 +13,7 @@ import type {
   ParsedPage,
   ProcessingStage,
 } from "./lib/types";
+import { visiblePages } from "./lib/guide-visibility";
 import GuideStep from "./ui/GuideStep";
 import HomeUploadStep, { type UploadFile } from "./ui/HomeUploadStep";
 import ProgressHeader from "./ui/ProgressHeader";
@@ -302,7 +303,11 @@ export default function Home() {
 
   function speakAll() {
     if (!guide) return;
-    speak(guide.pages.map(guidePageSpeechText).filter(Boolean).join(". "));
+    speak(visiblePages(guide.pages, answers).map(guidePageSpeechText).filter(Boolean).join(". "));
+  }
+
+  function updateGuideAnswer(questionId: string, value: string) {
+    setAnswers((current) => ({ ...current, [questionId]: value }));
   }
 
   function restart() {
@@ -396,6 +401,8 @@ export default function Home() {
         {step === "GUIDE" && guide && (
           <GuideStep
             guide={guide}
+            answers={answers}
+            onAnswer={updateGuideAnswer}
             onListenAll={speakAll}
             onEditAnswers={() => { setQuestionIndex(0); setStep("QUESTIONS"); }}
             onRestart={restart}

@@ -594,6 +594,76 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .guideDocumentFooter { margin-top: 48px; padding-top: 22px; color: var(--muted); border-top: 2px solid var(--line); font-size: var(--font-caption); line-height: 1.6; font-weight: 700; }
 .verticalGuideScreen > .guideBottomActions { width: min(760px, 100%); flex-wrap: wrap; margin: 22px auto 0; }
 
+/* 최종 안내서에서 답을 바로 바꾸는 선택 영역 */
+.personalizePanel {
+  width: min(760px, 100%);
+  margin: 0 auto 22px;
+  overflow: hidden;
+  background: var(--paper);
+  border: 2px solid var(--blue);
+  border-radius: 14px;
+}
+.personalizePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px;
+}
+.personalizePanelHeader p { margin: 0 0 4px; color: var(--blue-dark); font-weight: 900; }
+.personalizePanelHeader h2 { margin: 0; font-size: var(--font-card-title); }
+.personalizePanelHeader span { display: block; margin-top: 6px; color: var(--muted); font-weight: 750; }
+.personalizePanelHeader > button,
+.personalizeListen {
+  min-height: 48px;
+  padding: 0 16px;
+  color: var(--blue-dark);
+  background: var(--paper);
+  border: 2px solid var(--blue);
+  border-radius: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.personalizeQuestions { padding: 22px; border-top: 2px solid var(--line); }
+.personalizeHelp { margin: 0 0 20px; color: var(--ink); font-size: var(--font-body); font-weight: 800; }
+.personalizeQuestion {
+  min-width: 0;
+  margin: 0;
+  padding: 24px 0;
+  border: 0;
+  border-top: 2px solid var(--line);
+}
+.personalizeQuestion:first-of-type { border-top: 0; }
+.personalizeQuestion legend { padding: 0; color: var(--ink); font-size: 1.55rem; line-height: 1.35; font-weight: 950; }
+.personalizeQuestion > p { margin: 8px 0 14px; color: var(--ink); font-size: var(--font-body); font-weight: 700; }
+.personalizeListen { min-height: 44px; margin-bottom: 14px; }
+.personalizeChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.personalizeChoices button {
+  min-height: 72px;
+  padding: 10px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 3px solid var(--line);
+  border-radius: 10px;
+  font-size: var(--font-body);
+  cursor: pointer;
+}
+.personalizeChoices button span { display: block; margin-bottom: 4px; font-size: 1.45rem; font-weight: 950; }
+.personalizeChoices button.selected {
+  color: var(--blue-dark);
+  background: var(--blue-soft);
+  border-color: var(--blue-dark);
+  box-shadow: inset 0 0 0 2px var(--blue-dark);
+}
+.personalizeUnknown {
+  padding: 12px;
+  color: var(--amber) !important;
+  background: var(--amber-soft);
+  border-left: 5px solid var(--amber);
+}
+.pdfAction { display: grid; justify-items: end; gap: 5px; }
+.pdfAction small { max-width: 230px; color: var(--muted); font-size: .76rem; line-height: 1.35; text-align: right; font-weight: 700; }
+
 /* 안내문 근거형 쉬운말 챗봇 */
 .chatOverlay {
   position: fixed;
@@ -921,6 +991,12 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .pageOverview { grid-template-columns: 1fr; }
   .guideBottomActions { flex-direction: column; margin-bottom: 85px; }
   .guideBottomActions button { width: 100%; }
+  .personalizePanelHeader { align-items: flex-start; }
+  .personalizePanelHeader > button { flex: 0 0 auto; }
+  .personalizeQuestions { padding: 18px 15px; }
+  .personalizeChoices { grid-template-columns: 1fr; }
+  .pdfAction { justify-items: stretch; width: 100%; }
+  .pdfAction small { max-width: none; text-align: left; }
   .chatOverlay { padding: 0; }
   .chatPanel { width: 100%; height: 100dvh; border-width: 0; border-radius: 0; }
   .chatHeader { padding: 18px 16px; }
@@ -944,24 +1020,173 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 
-/* 브라우저의 인쇄/PDF 저장 화면 */
-@page { size: A4 portrait; margin: 12mm; }
+/* Easy Read 전용 PDF: 화면용 카드를 인쇄하지 않고 A4 페이지를 따로 렌더링한다. */
+@page { size: A4 portrait; margin: 0; }
 @media print {
-  :root { --base-scale: 1; }
-  body { background: var(--white); }
-  .appHeader, .progressSteps, .interactiveOnly, .chatOverlay, .processingOverlay, .globalError { display: none !important; }
-  .appShell, .mainViewport, .verticalGuideScreen { display: block; width: auto; min-height: 0; padding: 0; background: var(--white); border: 0; box-shadow: none; }
-  .verticalGuideDocument { width: auto; max-width: none; margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; }
-  .guideDocumentHeader { break-after: avoid; }
-  .guideKeySummary, .guideInstruction, .confirmationList article { break-inside: avoid; box-shadow: none; }
-  .guideSection { break-before: auto; }
-  .guideSection > h2 { break-after: avoid; margin-top: 10mm; }
-  .guideInstructionList { gap: 7mm; }
-  .instructionContent { grid-template-columns: 54mm 1fr; gap: 8mm; text-align: left; }
-  .instructionContent .pictureCard { width: 54mm; height: 54mm; }
-  .instructionCopy h3 { font-size: 23pt; }
-  .instructionCopy > p { font-size: 16pt; }
-  .guideDocumentFooter { font-size: 11pt; }
+  :root { --base-scale: 1; color-scheme: light; }
+  html, body { width: 210mm; margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .appHeader,
+  .progressSteps,
+  .interactiveOnly,
+  .screenOnly,
+  .chatOverlay,
+  .processingOverlay,
+  .globalError { display: none !important; }
+  .appShell,
+  .mainViewport,
+  .verticalGuideScreen {
+    display: block;
+    width: 210mm;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    border: 0;
+    box-shadow: none;
+  }
+  .printOnly { display: block !important; }
+  .easyReadPrintDocument {
+    width: 210mm;
+    margin: 0;
+    color: #111;
+    background: #fff;
+  }
+  .easyReadPrintPage {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    display: grid;
+    grid-template-rows: 18mm minmax(0, 1fr) 18mm;
+    box-sizing: border-box;
+    padding: 10mm 15mm 8mm;
+    overflow: hidden;
+    background: #fff;
+    break-after: page;
+    page-break-after: always;
+  }
+  .easyReadPrintPage:last-child { break-after: auto; page-break-after: auto; }
+  .easyReadPrintHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10mm;
+    padding-bottom: 5mm;
+    color: #111;
+    border-bottom: .6mm solid #111;
+    font-size: 12pt;
+  }
+  .easyReadPrintHeader b { color: #0b5fa5; font-size: 14pt; }
+  .easyReadPrintMain { display: grid; align-content: center; padding: 10mm 0; }
+  .easyReadPrintWhen {
+    margin: 0 0 9mm;
+    color: #111;
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 21pt;
+    line-height: 1.25;
+    font-weight: 900;
+  }
+  .easyReadPrintContent {
+    display: grid;
+    grid-template-columns: 64mm minmax(0, 1fr);
+    align-items: center;
+    gap: 12mm;
+  }
+  .easyReadPrintContent .pictureCard {
+    width: 62mm;
+    height: 62mm;
+    margin: 0;
+    background: #fff;
+    border: .6mm solid #0b5fa5;
+    border-radius: 4mm;
+  }
+  .easyReadPrintImportance {
+    display: inline-flex;
+    align-items: center;
+    gap: 3mm;
+    margin-bottom: 7mm;
+    color: #0b5fa5;
+    font-size: 13pt;
+    font-weight: 900;
+  }
+  .easyReadPrintImportance b {
+    width: 9mm;
+    height: 9mm;
+    display: inline-grid;
+    place-items: center;
+    color: #fff;
+    background: #0b5fa5;
+    border-radius: 50%;
+  }
+  .easyReadPrintPage.required .easyReadPrintImportance { color: #a40000; }
+  .easyReadPrintPage.required .easyReadPrintImportance b { background: #a40000; }
+  .easyReadPrintPage.caution .easyReadPrintImportance,
+  .easyReadPrintPage.ask_hospital .easyReadPrintImportance { color: #7a3e00; }
+  .easyReadPrintPage.caution .easyReadPrintImportance b,
+  .easyReadPrintPage.ask_hospital .easyReadPrintImportance b { background: #7a3e00; }
+  .easyReadPrintCopy h2 {
+    margin: 0 0 7mm;
+    color: #111;
+    font-size: 27pt;
+    line-height: 1.25;
+    letter-spacing: -.03em;
+  }
+  .easyReadPrintCopy > p {
+    margin: 0 0 4mm;
+    color: #111;
+    font-size: 17pt;
+    line-height: 1.55;
+    font-weight: 700;
+  }
+  .easyReadPrintCopy aside {
+    margin-top: 7mm;
+    padding: 4mm;
+    color: #113f63;
+    background: #edf5fb;
+    border-left: 1.2mm solid #0b5fa5;
+    font-size: 12pt;
+    line-height: 1.45;
+    font-weight: 800;
+  }
+  .easyReadPrintFooter {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8mm;
+    padding-top: 4mm;
+    color: #333;
+    border-top: .35mm solid #777;
+    font-size: 9.5pt;
+    line-height: 1.35;
+  }
+  .easyReadPrintFooter b {
+    font-family: var(--font-geist-mono), monospace;
+    font-size: 11pt;
+  }
+  .easyReadPrintCover main {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    text-align: center;
+  }
+  .easyReadPrintCover main > p { margin: 0 0 8mm; color: #0b5fa5; font-size: 15pt; font-weight: 900; }
+  .easyReadPrintCover .pictureCard { width: 64mm; height: 64mm; margin: 0 0 10mm; border-width: .6mm; border-radius: 5mm; }
+  .easyReadPrintCover h1 { margin: 0; color: #111; font-size: 33pt; line-height: 1.2; letter-spacing: -.04em; }
+  .easyReadPrintCover dl {
+    width: 128mm;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4mm;
+    margin: 12mm 0 0;
+  }
+  .easyReadPrintCover dl div {
+    padding: 4mm;
+    background: #edf5fb;
+    border: .45mm solid #0b5fa5;
+    border-radius: 3mm;
+  }
+  .easyReadPrintCover dt { color: #333; font-size: 10pt; font-weight: 800; }
+  .easyReadPrintCover dd { margin: 2mm 0 0; color: #111; font-size: 15pt; font-weight: 900; }
 }
 
 /* OpenSearch 데모에서 가져온 평평하고 정돈된 화면 언어 */

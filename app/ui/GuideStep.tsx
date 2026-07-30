@@ -1,11 +1,19 @@
 "use client";
 
+import {
+  visibleConfirmations,
+  visiblePages,
+} from "@/app/lib/guide-visibility";
 import type { FinalGuideResult, ParsedPage } from "@/app/lib/types";
+import EasyReadPrintDocument from "./EasyReadPrintDocument";
 import GuideChat from "./GuideChat";
 import GuideSection from "./GuideSection";
+import PersonalizePanel from "./PersonalizePanel";
 
 interface Props {
   guide: FinalGuideResult;
+  answers: Record<string, string>;
+  onAnswer: (questionId: string, value: string) => void;
   onListenAll: () => void;
   onEditAnswers: () => void;
   onRestart: () => void;
@@ -39,6 +47,8 @@ function groupGuidePages(guide: FinalGuideResult): SectionGroup[] {
 
 export default function GuideStep({
   guide,
+  answers,
+  onAnswer,
   onListenAll,
   onEditAnswers,
   onRestart,
@@ -48,8 +58,15 @@ export default function GuideStep({
   speaking,
   onStopSpeaking,
 }: Props) {
-  const groups = groupGuidePages(guide);
-  const keyActions = guide.pages.filter((page) => page.section !== "표지").slice(0, 3);
+  const shownPages = visiblePages(guide.pages, answers);
+  const shownConfirmations = visibleConfirmations(guide.hospital_confirmation, answers);
+  const shownGuide = {
+    ...guide,
+    pages: shownPages,
+    hospital_confirmation: shownConfirmations,
+  };
+  const groups = groupGuidePages(shownGuide);
+  const keyActions = shownPages.filter((page) => page.section !== "표지").slice(0, 3);
 
   function moveToSection(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -62,10 +79,20 @@ export default function GuideStep({
           <span aria-hidden="true">{speaking ? "⏹" : "🔊"}</span>
           {speaking ? "멈추기" : "전체 듣기"}
         </button>
-        <button className="pdfButton" type="button" onClick={onPrint}>PDF 저장</button>
+        <div className="pdfAction">
+          <button className="pdfButton" type="button" onClick={onPrint}>PDF 저장</button>
+          <small>저장 창에서 ‘머리글과 바닥글’을 꺼 주세요.</small>
+        </div>
       </div>
 
-      <article className="verticalGuideDocument">
+      <PersonalizePanel
+        questions={guide.personalization_questions}
+        answers={answers}
+        onAnswer={onAnswer}
+        onSpeak={onSpeak}
+      />
+
+      <article className="verticalGuideDocument screenOnly">
         <header className="guideDocumentHeader">
           <p>나를 위한 쉬운 안내서</p>
           <h1 id="guide-heading" data-screen-title tabIndex={-1}>
@@ -99,7 +126,7 @@ export default function GuideStep({
                 {group.title}
               </button>
             ))}
-            {guide.hospital_confirmation.length > 0 && (
+            {shownConfirmations.length > 0 && (
               <button type="button" onClick={() => moveToSection("hospital-confirmation")}>병원 확인</button>
             )}
           </nav>
@@ -111,11 +138,11 @@ export default function GuideStep({
           ))}
         </div>
 
-        {guide.hospital_confirmation.length > 0 && (
+        {shownConfirmations.length > 0 && (
           <section className="guideSection hospitalConfirmation" id="hospital-confirmation" aria-labelledby="hospital-confirmation-heading">
             <h2 id="hospital-confirmation-heading">병원에 확인할 내용</h2>
             <div className="confirmationList">
-              {guide.hospital_confirmation.map((item, index) => (
+              {shownConfirmations.map((item, index) => (
                 <article key={`${item.title}-${index}`}>
                   <span aria-hidden="true">?</span>
                   <div><h3>{item.title}</h3><p>{item.body}</p></div>
@@ -129,10 +156,16 @@ export default function GuideStep({
       </article>
 
       <div className="guideBottomActions interactiveOnly">
-        <GuideChat guide={guide} documentPages={documentPages} onSpeak={onSpeak} speaking={speaking} onStopSpeak={onStopSpeaking} />
+        <GuideChat guide={shownGuide} documentPages={documentPages} onSpeak={onSpeak} speaking={speaking} onStopSpeak={onStopSpeaking} />
         <button type="button" onClick={onEditAnswers}>답변 다시 보기</button>
         <button type="button" onClick={onRestart}>새 안내문 만들기</button>
       </div>
+
+      <EasyReadPrintDocument
+        guide={guide}
+        pages={shownPages}
+        confirmations={shownConfirmations}
+      />
     </section>
   );
 }

@@ -10,7 +10,8 @@
     "test:merge": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/document-merge.test.mjs",
     "test:accessibility": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/accessibility-safety.test.mjs",
     "test:ui-flow": "node tests/vertical-flow.test.mjs",
-    "test": "npm run test:merge && npm run test:accessibility && npm run test:ui-flow"
+    "test:visibility": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types tests/guide-visibility.test.mjs",
+    "test": "npm run test:merge && npm run test:accessibility && npm run test:ui-flow && npm run test:visibility"
   },
   "dependencies": {
     "geist": "^1.7.2",
